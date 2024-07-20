@@ -5,14 +5,14 @@
       <el-button class="tagBut" type="danger" size="mini" icon="el-icon-close" circle @click="close"></el-button>
     </div>
     <div id="AuxiliaryPanelDiv" class="dataBody" ref="AuxiliaryPanelDiv">
-      asdasd
+      <div class="pdfContainer" ref="bodypanel" style="overflow-y: auto;overflow-x: hidden;">
+        <div style="position: relative;width: 100%;height: 100%;">
+          <canvas ref="renderContext"></canvas>
+        </div>
+      </div>
     </div>
-    <div
-      class="resizer"
-      v-for="direction in ['right', 'bottom', 'left', 'bottom-right', 'bottom-left']"
-      :class="`resizer-${direction}`"
-      @mousedown.stop="startResize(direction, $event)"
-    ></div>
+    <div class="resizer" v-for="direction in ['right', 'bottom', 'left', 'bottom-right', 'bottom-left']"
+      :class="`resizer-${direction}`" @mousedown.stop="startResize(direction, $event)"></div>
   </div>
 </template>
 
@@ -20,12 +20,20 @@
 import * as d3 from 'd3';
 import axios from "axios";
 const docx = require("docx-preview");
+import * as PDFJS from "pdfjs-dist/legacy/build/pdf";  // 引入PDFJS 
+import pdfjsWorker from "pdfjs-dist/legacy/build/pdf.worker.entry.js"; // 引入workerSrc的地址
+PDFJS.GlobalWorkerOptions.workerSrc = pdfjsWorker; //设置PDFJS.GlobalWorkerOptions.workerSrc的地址
 export default {
   props: [],
   components: {},
   data() {
     return {
-      path:'D:/Cailibuhong/XGD/fileData',
+      path: 'D:/Cailibuhong/XGD/fileData',
+      fileName: '',
+      pdfPagesNum: 0,
+      currentpage: 2,
+      pdfUrl: '',
+      rate: 1,
       isDragging: false,
       isResizing: false,
       initialMouseX: 0,
@@ -35,28 +43,84 @@ export default {
       initialLeft: 0,
       initialTop: 0,
       direction: '',
-      AuxiliaryShow:true,
+      AuxiliaryShow: false,
     };
   },
   watch: {
 
   },
   methods: {
-    close(){
+    close() {
       this.AuxiliaryShow = false;
     },
-    goPreview(path, fileName) {
+    goPreview(fileName,text) {
+      console.log(fileName,text)
       axios({
-        method: "get",
-        responseType: "blob", // 因为是流文件，所以要指定blob类型
-        url: "/api/file/getDoc", // 自己的服务器，提供的一个word下载文件接口
+        method: "post",
+        responseType: "blob",
+        url: "/api/filePre",
         params: {
-          path: path,
-          fileName: fileName
+          file: fileName,
+          text: text,
         },
-      }).then(({ data }) => {
-        console.log(data); // 后端返回的是流文件
-        docx.renderAsync(data, this.$refs.AuxiliaryPanelDiv); // 渲染到页面
+      }).then((res) => {
+        let blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        if (window.createObjectURL != undefined) {
+          // basic
+          this.pdfUrl = window.createObjectURL(blob);
+        } else if (window.URL != undefined) {
+          // mozilla(firefox)
+          this.pdfUrl = window.URL.createObjectURL(blob);
+        } else if (window.webkitURL != undefined) {
+          // webkit or chrome
+          this.pdfUrl = window.webkitURL.createObjectURL(blob);
+        }
+        console.log(res,res.headers.pagenumber)
+        this.getPdf(this.pdfUrl,parseInt(res.headers.pagenumber));
+        // docx.renderAsync(data, this.$refs.fileTest); // 渲染到页面
+      });
+    },
+    getPdf(url, pageNum) {
+
+      PDFJS.getDocument(url).promise.then((pdfDoc) => {
+        this.pdfPagesNum = pdfDoc.numPages * 10; // pdf的总页数
+        //获取第pageNum页的数据
+        this.readerpdfDoc = pdfDoc;
+        this.showPdf(pdfDoc, pageNum)
+      });
+    },
+    showPdf(pdfDoc, pageNum) {
+      let that = this;
+      console.log(pdfDoc, pageNum)
+      pdfDoc.getPage(pageNum).then((page) => {
+        console.log(page)
+        // 设置canvas相关的属性
+        const canvas = this.$refs.renderContext
+        const ctx = canvas.getContext("2d");
+        const dpr = window.devicePixelRatio || 1;
+        const bsr =
+          ctx.webkitBackingStorePixelRatio ||
+          ctx.mozBackingStorePixelRatio ||
+          ctx.msBackingStorePixelRatio ||
+          ctx.oBackingStorePixelRatio ||
+          ctx.backingStorePixelRatio ||
+          1;
+        const ratio = dpr / bsr;
+        const viewport = page.getViewport({ scale: that.rate });
+        canvas.width = viewport.width * ratio;
+        canvas.height = viewport.height * ratio;
+        console.log(viewport, canvas.width)
+        canvas.style.width = viewport.width + "px";
+        canvas.style.height = viewport.height + "px";
+        //canvas.style.transform="translate(-20px,-30px)";
+        // canvas.style["z-index"]="-1";
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        const context = {
+          canvasContext: ctx,
+          viewport: viewport,
+        };
+        // 数据渲染到canvas画布上
+        page.render(context);
       });
     },
     startDrag(event) {
@@ -99,7 +163,7 @@ export default {
       const matrix = new WebKitCSSMatrix(style.transform);
       this.initialLeft = matrix.m41 || 0;
       this.initialTop = matrix.m42 || 0;
-      
+
       this.initialWidth = parseFloat(style.width);
       this.initialHeight = parseFloat(style.height);
       // this.initialLeft = rect.left;
@@ -124,7 +188,7 @@ export default {
         this.$refs.AuxiliaryPanel.style.height = `${this.initialHeight + deltaY}px`;
       }
       if (this.direction.includes('left')) {
-        console.log("left",deltaX)
+        console.log("left", deltaX)
         this.$refs.AuxiliaryPanel.style.width = `${this.initialWidth - deltaX}px`;
         // this.$refs.AuxiliaryPanel.style.left = `${this.initialLeft + deltaX}px`;
         this.$refs.AuxiliaryPanel.style.transform = `translate(${this.initialLeft + deltaX}px, ${oriTop}px)`;
@@ -149,9 +213,13 @@ export default {
   },
   mounted() {
     const _this = this;
-    let path =this.path;
-    let fileName = 'testFile1';
-    this.goPreview(path,fileName);
+    let path = this.path;
+    this.$bus.$on('quote', (val) => {
+      _this.fileName = val;
+      _this.goPreview(val.fileName,val.sentence)
+      _this.AuxiliaryShow = true;
+    });
+    // this.goPreview(path,fileName);
   },
 } 
 </script>

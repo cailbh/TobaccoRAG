@@ -9,7 +9,8 @@ body {
       margin:0px;
   }
   .el-menu{
-    float: left;
+    float: left;    
+    width: 100%;
   }
 @media (prefers-reduced-motion: no-preference) {
     :root {
@@ -57,16 +58,15 @@ body {
 #menuDiv{
 
     float: left;
-    width: 300px;
+    width: 200px;
     height: calc(100% - 65px);
-    background-color: rgb(255, 255, 255);
+    background-color: #545c64;
     bottom: 0px;
     position: fixed;
-    right: 0px;
 }
 #contentBody {
     float: left;
-    width: calc(100% - 300px);
+    width: calc(100% - 200px);
     height: calc(100% - 65px);
     background-color: rgb(255, 255, 255);
     bottom: 0px;
@@ -87,4 +87,51 @@ body {
   }
 .navTxt{
   font-size: 14px;
+}
+.filePre{
+  float: left;
+  width: 50%;
+  height: 100%;
+}
+.fileTxt{
+  float: left;
+  width: 50%;
+  height: 100%;
+  overflow: auto;
+}
+.paginationDiv{
+  position: absolute;
+  bottom: 10px;
+  left: 10%;
+}
+.fileview{
+  width:30%;
+  height: calc(100% - 4px);
+  border: 1px solid #ddd;
+  float: left;
+  margin-top: 2px;
+}
+.pdfContainer{
+  width:100%;
+  height: calc(100% - 30px);
+}
+.box-card {
+  margin: 10px;
+  width: calc(100% - 30px);
+}
+.fileTxtBody{
+  width: 100%;
+  height: calc(100% - 50px);
+
+}
+.fileTxtHead{
+  width: 100%;
+  height: 50px;
+}
+.el-textarea__inner {
+  background-color: rgba(255, 255, 255, 0);
+}
+.buts{
+  float: right;
+  margin: 10px;
 }
