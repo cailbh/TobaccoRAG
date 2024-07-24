@@ -3,9 +3,7 @@
 
 <template>
   <div class="FileManagerPanel">
-    <div class="panelHead">FileManager
-      <el-button class="returnHomeBut" v-show="preShow" size="mini" @click="returnHome()">返回</el-button>
-      <el-button class="returnHomeBut" v-show="preShow" size="mini" @click="preClick()">打标</el-button>
+    <div class="panelHead">
     </div>
     <div id="FileManagerPanelDiv" class="panelBody" ref="FileManagerPanelDiv">
       <el-table v-show="tableShow" :data="tableData" style="width: 100%" :row-class-name="tableRowClassName">
@@ -84,7 +82,6 @@ export default {
     type(val) {
     },
     currentTagData(val){
-      console.log(val);
     },
     fileData(val) {
       const _this = this;
@@ -93,7 +90,7 @@ export default {
         let temp = {
           id:element['_id'],
           sort: index+1,
-          name: element['title'],
+          name: element['fileName'],
           fileName: element['fileName'],
         }
         tableData.push(temp)
@@ -105,61 +102,13 @@ export default {
     click_Ent(time) {
       this.$emit("timeDur", time);
     },
-    preClick(){
-      this.autoMarking(this.currentFile['id'])
-    },
-    goPreview(fileName) {
-      axios({
-        method: "get",
-        responseType: "blob", // 因为是流文件，所以要指定blob类型
-        url: "/api/file/getDoc", // 自己的服务器，提供的一个word下载文件接口
-        params:{
-             fileName:fileName
-         },
-      }).then(({ data }) => {
-        console.log(data); // 后端返回的是流文件
-        docx.renderAsync(data, this.$refs.file); // 渲染到页面
-      });
-    },
-    returnHome(){
-      this.tableShow = true;
-      this.preShow = false;
-    },
-    autoMarking(cId){
-      const _this = this;
-      this.$http
-        .post("/api/tag/AutoMarking", {
-          params: {
-            cId: cId
-          }
-        }, {})
-        .then((response) => {
-          _this.$message({
-            message: '设置成功',
-            type: 'success',
-            duration: 1000
-          });
-          console.log("atm",response)
-          let LLMTag = JSON.parse(response.bodyText);
-          if(typeof(LLMTag) === 'object'){
-            _this.$bus.$emit("LLMPreTags", LLMTag);
-          }
-        });
-    },
+
     handleChoose(index, row) {
       let cId = row['id'];
       this.ModifyChooseTag(cId);
     },
     handleEdit(index, row) {
-      this.tableShow = false;
-      this.preShow = true;
-      this.currentFile =this.fileData.find((d)=>{return d['_id'] == row['id']});
-      console.log(row,this.fileData)
-      this.goPreview(row.fileName)
-      console.log(1,this.currentFile)
-      this.$bus.$emit("currentFile", this.currentFile);
-      
-      this.$bus.$emit("tagEdit","true");
+      this.$bus.$emit("changeFilePre", row['fileName']);
     },
     handleDelete(index, row) {
       console.log(index, row);
@@ -185,7 +134,7 @@ export default {
 
 
     const _this = this;
-    // this.getTagData()
+    this.getTagData()
     this.$nextTick(() => {
     });
   },

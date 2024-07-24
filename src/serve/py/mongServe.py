@@ -35,7 +35,30 @@ def fetch_data_findone_db(collectionName,key,value):
      # 获取集合
     collection = db[collectionName]
     data = collection.find_one({key: value})
-    return data
+    res = []
+    if data !=None:
+        res = [doc for doc in data]
+    return res
+
+def fetch_data_find_db(collectionName,key,value):
+     # 获取集合
+    collection = db[collectionName]
+    data = collection.find({key: value})
+    res = []
+    if data !=None:
+        for doc in data:
+            doc["_id"] = str("_id")
+            res.append(doc)
+    return res
+
+def fetch_alldata_db(collectionName):
+     # 获取集合
+    collection = db[collectionName]
+    data = collection.find({},{"_id":0})
+    res = []
+    if data !=None:
+        res = [doc for doc in data]
+    return res
 
 def insert_data(collection_name, data):
     # 获取集合

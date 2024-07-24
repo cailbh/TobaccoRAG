@@ -3,14 +3,14 @@
   <div class="FilePreSeqPanel" ref="FilePreSeqPanel">
     <div id="FilePreSeqHead">
       <div class="fileTxtHead">
-        <input type="file" ref="fileUpload" @change="handleFileChange" style="display: none;" />
+        <el-button class="buts" size="small" type="primary" @click="textChunkClk">开始分割</el-button>
         <el-button class="buts" size="small" type="primary" @click="confirmClk">确认</el-button>
       </div>
     </div>
     <div id="FilePreSeqBody">
       <div class="filePre">
         <div class="pdfContainer" ref="bodypanel" style="overflow-y: auto;overflow-x: hidden;">
-          <div style="position: relative;width: 100%;height: 100%;">
+          <div class="canvasContainer" style="position: relative;width: 100%;height: 100%;">
             <canvas ref="renderContext"></canvas>
           </div>
         </div>
@@ -46,19 +46,22 @@ import pdfjsWorker from "pdfjs-dist/legacy/build/pdf.worker.entry.js"; // 引入
 PDFJS.GlobalWorkerOptions.workerSrc = pdfjsWorker; //设置PDFJS.GlobalWorkerOptions.workerSrc的地址
 
 export default {
-  props: [],
+  props: ["curFileName"],
   components: {},
   data() {
     return {
       pdfPagesNum: 0,
       currentpage: 2,
       pdfUrl: '',
-      fileName:'',
+      fileName: '',
       rate: 1,
+      textData: [],
     };
   },
   watch: {
-
+    curFileName(val) {
+      console.log("curFileNamesss", val);
+    }
   },
   methods: {
     close() {
@@ -69,71 +72,78 @@ export default {
       this.currentpage = num;
       this.mode = 1;
     },
-    confirmClk() {
+    textChunkClk() {
       const _this = this;
+      let chunkSize = 300;
+      let overlap = 80;
+      let fileName = this.fileName
       this.$http
-        .post("/api/seqToVec", { textData: _this.textData,fileName:  _this.fileName}, {
+        .post("/api/wordToSeq", { file: fileName, overlap: overlap, chunkSize: chunkSize }, {
           headers: {
             'Content-Type': 'application/json'
           }
         })
         .then((res) => {
-          console.log(res.body);
+          let seqData = res.body;
+          _this.textData = seqData;
+        });
+    },
+    confirmClk() {
+      const _this = this;
+      this.$http
+        .post("/api/seqToVec", { textData: _this.textData, fileName: _this.fileName }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then((res) => {
           _this.$message({
             message: '成功建立向量数据库',
             type: 'success'
           });
         });
     },
-    handleFileChange(event) {
-      const file = event.target.files[0];
-      console.log(file)
-      let fileName = file.name;
-      this.fileName = fileName
+    fileChange(fileName) {
       const _this = this;
-      if (file) {
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        axios({
-          method: "post",
-          responseType: "blob",
-          url: "/api/fileUpload",
-          params: {
-            file: fileName,
-          },
-        }).then((res) => {
-          let blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-          if (window.createObjectURL != undefined) {
-            // basic
-            this.pdfUrl = window.createObjectURL(blob);
-          } else if (window.URL != undefined) {
-            // mozilla(firefox)
-            this.pdfUrl = window.URL.createObjectURL(blob);
-          } else if (window.webkitURL != undefined) {
-            // webkit or chrome
-            this.pdfUrl = window.webkitURL.createObjectURL(blob);
+      axios({
+        method: "post",
+        responseType: "blob",
+        url: "/api/fileUpload",
+        params: {
+          file: fileName,
+        },
+      }).then((res) => {
+        let blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        if (window.createObjectURL != undefined) {
+          // basic
+          this.pdfUrl = window.createObjectURL(blob);
+        } else if (window.URL != undefined) {
+          // mozilla(firefox)
+          this.pdfUrl = window.URL.createObjectURL(blob);
+        } else if (window.webkitURL != undefined) {
+          // webkit or chrome
+          this.pdfUrl = window.webkitURL.createObjectURL(blob);
+        }
+        this.getPdf(this.pdfUrl, 1);
+        // docx.renderAsync(data, this.$refs.fileTest); // 渲染到页面
+      });
+      this.getSeqData(fileName);
+    },
+    getSeqData(fileName) {
+      const _this = this;
+      this.$http
+        .post("/api/getFileTextSeq", { fileName: fileName }, {
+          headers: {
+            'Content-Type': 'application/json'
           }
-          this.getPdf(this.pdfUrl, 1);
-          // docx.renderAsync(data, this.$refs.fileTest); // 渲染到页面
+        })
+        .then((response) => {
+          console.log("getFileTextSeq", response.body);
+          _this.textData = response.body;
+          // }
         });
-        let chunkSize = 300;
-        let overlap = 80;
-        this.$http
-          .post("/api/wordToSeq", { file: fileName, overlap: overlap, chunkSize: chunkSize }, {
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          })
-          .then((res) => {
-            let seqData = res.body;
-            _this.textData = seqData;
-          });
-      }
     },
     getPdf(url, pageNum) {
-
       PDFJS.getDocument(url).promise.then((pdfDoc) => {
         this.pdfPagesNum = pdfDoc.numPages * 10; // pdf的总页数
         //获取第pageNum页的数据
@@ -143,36 +153,36 @@ export default {
     },
     showPdf(pdfDoc, pageNum) {
       let that = this;
-      console.log(pdfDoc, pageNum)
       pdfDoc.getPage(pageNum).then((page) => {
-        console.log(page)
         // 设置canvas相关的属性
         const canvas = this.$refs.renderContext
-        const ctx = canvas.getContext("2d");
-        const dpr = window.devicePixelRatio || 1;
-        const bsr =
-          ctx.webkitBackingStorePixelRatio ||
-          ctx.mozBackingStorePixelRatio ||
-          ctx.msBackingStorePixelRatio ||
-          ctx.oBackingStorePixelRatio ||
-          ctx.backingStorePixelRatio ||
-          1;
-        const ratio = dpr / bsr;
-        const viewport = page.getViewport({ scale: that.rate });
-        canvas.width = viewport.width * ratio;
-        canvas.height = viewport.height * ratio;
-        console.log(viewport, canvas.width)
-        canvas.style.width = viewport.width + "px";
-        canvas.style.height = viewport.height + "px";
-        //canvas.style.transform="translate(-20px,-30px)";
-        // canvas.style["z-index"]="-1";
-        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-        const context = {
-          canvasContext: ctx,
-          viewport: viewport,
-        };
-        // 数据渲染到canvas画布上
-        page.render(context);
+        console.log('canvas', canvas);
+        if (canvas) {
+          const ctx = canvas.getContext("2d");
+          const dpr = window.devicePixelRatio || 1;
+          const bsr =
+            ctx.webkitBackingStorePixelRatio ||
+            ctx.mozBackingStorePixelRatio ||
+            ctx.msBackingStorePixelRatio ||
+            ctx.oBackingStorePixelRatio ||
+            ctx.backingStorePixelRatio ||
+            1;
+          const ratio = dpr / bsr;
+          const viewport = page.getViewport({ scale: that.rate });
+          canvas.width = viewport.width * ratio;
+          canvas.height = viewport.height * ratio;
+          canvas.style.width = viewport.width + "px";
+          canvas.style.height = viewport.height + "px";
+          //canvas.style.transform="translate(-20px,-30px)";
+          // canvas.style["z-index"]="-1";
+          ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+          const context = {
+            canvasContext: ctx,
+            viewport: viewport,
+          };
+          // 数据渲染到canvas画布上
+          page.render(context);
+        }
       });
     },
   },
@@ -183,7 +193,13 @@ export default {
   },
   mounted() {
     const _this = this;
-      _this.$refs.fileUpload.click();
+    if (this.curFileName != '') {
+      _this.fileChange(_this.curFileName + '.pdf')
+    }
+    this.$bus.$on('curFileName', (val) => {
+      _this.fileName = val;
+      _this.fileChange(_this.fileName)
+    });
   },
 } 
 </script>

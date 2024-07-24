@@ -26,12 +26,14 @@
       </b-nav> -->
       </div>
       <div id="menuDiv">
-        <el-menu default-active="3" class="el-menu" @open="handleOpen" @close="handleClose" @select="select"
+        <el-menu :default-active="defaultActive" class="el-menu" @open="handleOpen" @close="handleClose" @select="select"
           background-color="#545c64" text-color="#fff" active-text-color="#ffd04b">
           <el-menu-item index="1">
             <template slot="title">
               <i class="el-icon-upload"></i>
               <span slot="title" class="navTxt">文件上传</span>
+
+              <input type="file" ref="fileUpload" @change="handleFileChange" style="display: none;" />
             </template>
           </el-menu-item>
           <el-menu-item index="2">
@@ -49,7 +51,7 @@
         </el-menu>
       </div>
       <div id="contentBody">
-        <component :is="currentView"></component>
+        <component :is="currentView" :curFileName="curFileName"></component>
       </div>
     </div>
   </div>
@@ -65,14 +67,16 @@ import axios from 'axios';
 const docx = require("docx-preview");
 
 export default {
-  components: { Head,FilePreSeq,ChatWindow,FileManager},
+  components: { Head, FilePreSeq, ChatWindow, FileManager },
   /* eslint-disable no-unused-vars */
   data() {
     return {
       fileContent: '',
+      curFileName:'',
       textData: [
         { index: 0, sentence: '' },
       ],
+      defaultActive:"3",
       mLigntcolor: [
         "#ff9c9c",
         "#cc88b0",
@@ -113,42 +117,12 @@ export default {
       const colors = this.mLigntcolor;
       return colors[index % colors.length];
     },
-    handleFileChange1(event) {
+    handleFileChange(event) {
       const file = event.target.files[0];
-      console.log(file)
       let fileName = file.name;
-      const _this = this;
-      if (file) {
-        // const reader = new FileReader();
-        // reader.onload = (e) => {
-        //   const arrayBuffer = e.target.result;
-        //   mammoth.convertToHtml({ arrayBuffer: arrayBuffer }, {
-        //   })
-        //   .then(result => {
-        //   })
-        //   .catch(err => console.error(err));
-        // };
-        // reader.readAsArrayBuffer(file);
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        axios({
-          method: "post",
-          responseType: "blob",
-          url: "/api/fileUpload",
-          params: {
-            file: fileName,
-          },
-        }).then(({ data }) => {
-          console.log(data);
-          // docx.renderAsync(data, this.$refs.fileTest); // 渲染到页面
-        });
-
-      }
+      this.$bus.$emit("curFileName", fileName);
     },
     handleOpen(key, keyPath) {
-      console.log(key)
       const _this = this;
       if (key == '1') {
       }
@@ -159,18 +133,16 @@ export default {
     select(key, keyPath) {
       const _this = this;
       _this.currentView = ""
-      if (key == '1') { 
-      _this.currentView = "FilePreSeq"
-        // _this.$refs.fileUpload.click();
-      }
-      if (key == '3') {
-        _this.currentView = "ChatWindow"
+      if (key == '1') {
+        _this.currentView = "FilePreSeq";
+        _this.defaultActive="2";
+        _this.$refs.fileUpload.click();
       }
       if (key == '2') {
         _this.currentView = "FileManager";
       }
-      if (key == '4') {
-        _this.currentView = "Kg4Qa"
+      if (key == '3') {
+        _this.currentView = "ChatWindow";
       }
     },
     handleClose(key, keyPath) {
@@ -182,7 +154,10 @@ export default {
   mounted() {
     const _this = this;
     this.$el.style.setProperty("--heightStyle", document.documentElement.clientHeight + "px");
-    this.$bus.$emit("colorMap", _this.mLigntcolor);
+    this.$bus.$on('changeFilePre', (val) => {
+        _this.curFileName = val;
+        _this.currentView = "FilePreSeq";
+    });
   },
   beforeDestroy() {
     clearTimeout(this.timer);

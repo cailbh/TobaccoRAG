@@ -23,7 +23,7 @@
                 <div v-else class="notMe">
                     <div class="chatHead">
                         <div class="chatIcon"></div>
-                        <div class="textName">ChatGPT</div>
+                        <div class="textName">烟草智能AI</div>
                     </div>
                     <el-card class="box-card">
                         <!-- <div slot="header" class="clearfix">

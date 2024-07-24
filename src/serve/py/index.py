@@ -81,10 +81,10 @@ def find_text_page_in_pdf(pdf_path, text):
         lenWords = len(words)
         lenSearchWord = 0
         for w in words:
-            text_instances = page.search_for('第十四条')
+            text_instances = page.search_for(w)
             if text_instances:
                 lenSearchWord +=1
-        if lenSearchWord/lenWords >=0.8:
+        if lenSearchWord/lenWords >=0.5:
             return page_num+1   # 页码从 1 开始
     return 2
 
@@ -111,6 +111,13 @@ def file_upload():
     path = file_path+file
     outpath = file_path
     pdf_path = f'{outpath}/{file_name_ori}.pdf'
+
+    # 集合名称
+    collection_name = 'fileList'
+    oriFileData = mg.fetch_data_findone_db(collection_name,"fileName",file_name_ori)
+    if oriFileData == None:
+        mg.insert_data(collection_name, [{"fileName":file_name_ori}])
+
     if os.path.exists(pdf_path):
         pdf_blob = myTools.read_pdf_as_blob(pdf_path)
         response = Response(io.BytesIO(pdf_blob), mimetype='application/pdf')
@@ -184,32 +191,18 @@ def find_most_similar_vectors(vector_array, target_vector, top_n=5):
     return most_similar_vectors
 
 
+@app.route('/getFileList', methods=['GET'])
+def getFileList():
+    collection_name = 'fileList'
+    filiList = mg.fetch_alldata_db(collection_name)
+    return jsonify(filiList)
 
-def main():
-    # 从 MongoDB 中检索向量数据
+@app.route('/getFileTextSeq', methods=['POST'])
+def getFileTextSeq():
+    fileName = request.json.get('fileName').split(".")[0]
     collection_name = 'SeqVector'
-    vector_data = mg.fetch_vectors_from_db(collection_name)
-    
-    # # 将向量数据转换为 numpy 数组
-    # vector_array = np.array(vector_data)
-    
-    # # 示例目标向量
-    # target_vector = np.array([1.0, 1.0, 0.5])
-    
-    # # 查找最相似的前 3 个向量
-    # most_similar = find_most_similar_vectors(vector_array, target_vector, top_n=3)
-    
-    # # 从 MongoDB 中返回最相似向量的具体数据
-    # most_similar_data = []
-    # for index, similarity in most_similar:
-    #     vector_doc = collection.find_one({'vector': vector_data[index]})
-    #     vector_doc['similarity'] = similarity
-    #     most_similar_data.append(vector_doc)
-    
-    # print("Most similar vectors:")
-    # for data in most_similar_data:
-    #     print(data)
-
+    filiList = mg.fetch_data_find_db(collection_name,"fileName",fileName)
+    return jsonify(filiList)
 
 @app.route('/QA', methods=['POST'])
 def QandA():
@@ -236,7 +229,7 @@ def QandA():
     for da in most_similar_data:
         outKnowledge += da['sentence']
     messages = []
-    # client = ZhipuAI(api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj")  # 填写您自己的APIKey
+    client = ZhipuAI(api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj")  # 填写您自己的APIKey
 
     prompts = '你是一名烟草公司的数据管理人员，需要对用户的问题精准得回答，下面是你的资料：\n'+outKnowledge
     
@@ -245,13 +238,13 @@ def QandA():
     answers = '11'
     print(type(most_similar_data))
     # -----------------------------------------------------------
-    # messages += [{"role": "user", "content": user_input}]
-    # response = client.chat.completions.create(
-    #     model="glm-4",  # 填写需要调用的模型名称
-    #     messages=messages
-    # )
-    # response_message = response.choices[0].message.content
-    # answers = str(response_message)
+    messages += [{"role": "user", "content": user_input}]
+    response = client.chat.completions.create(
+        model="glm-4",  # 填写需要调用的模型名称
+        messages=messages
+    )
+    response_message = response.choices[0].message.content
+    answers = str(response_message)
     # -----------------------------------------------------------
     return jsonify({"answers":answers,"quote":list(most_similar_data)})
 

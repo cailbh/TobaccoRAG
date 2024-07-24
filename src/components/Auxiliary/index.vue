@@ -95,7 +95,8 @@ export default {
       pdfDoc.getPage(pageNum).then((page) => {
         console.log(page)
         // 设置canvas相关的属性
-        const canvas = this.$refs.renderContext
+        const canvas = this.$refs.renderContext;
+        if (canvas) {
         const ctx = canvas.getContext("2d");
         const dpr = window.devicePixelRatio || 1;
         const bsr =
@@ -121,6 +122,7 @@ export default {
         };
         // 数据渲染到canvas画布上
         page.render(context);
+      }
       });
     },
     startDrag(event) {
