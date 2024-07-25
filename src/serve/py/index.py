@@ -20,7 +20,7 @@ import numpy as np
 import ast
 from bson import ObjectId, json_util
 
-file_path = 'D:/Cailibuhong/Tobacco/py/data/杭烟营销中心各类标准文件/'
+file_path = 'D:\Work\YanCao\TobaccoRAG\data/杭烟营销中心各类标准文件/'
 
 def convert_word_to_pdf(input_path, output_path):
     pythoncom.CoInitialize()
@@ -106,6 +106,7 @@ def file_pre():
 @app.route('/fileUpload', methods=['POST'])
 def file_upload():
     file = request.args.get('file')
+    print(file)
     file_name = file.split(".")[1]
     file_name_ori = file.split(".")[0]
     path = file_path+file
@@ -115,7 +116,8 @@ def file_upload():
     # 集合名称
     collection_name = 'fileList'
     oriFileData = mg.fetch_data_findone_db(collection_name,"fileName",file_name_ori)
-    if oriFileData == None:
+    print(collection_name,"fileName",file_name_ori,oriFileData)
+    if (oriFileData == None) | (oriFileData == []):
         mg.insert_data(collection_name, [{"fileName":file_name_ori}])
 
     if os.path.exists(pdf_path):
@@ -146,7 +148,7 @@ def word2seq():
     file = request.json.get('file')    
     overlap = request.json.get('overlap')
     chunkSize = request.json.get('chunkSize')
-    path = file_path+file+".doc"
+    path = file_path+file
     word = myTools.read_word_file(path)
     # single_sentences_list = remove_newline_items(re.split(r'(?<=[。.?!\n\n])\s+', word))
 
@@ -166,6 +168,11 @@ def seq2vec():
     # 集合名称
     collection_name = 'SeqVector'
     mg.insert_data(collection_name, textData)
+
+    # 集合名称
+    collection_name = 'fileList'
+    oriFileData = mg.updata_data_findone_db(collection_name,"fileName",fileName,{'chunkLen':len(textData)})
+
     return jsonify(['success'])
 
 

@@ -14,7 +14,7 @@
     </div>
     <div id="FilePreSeqBody">
       <div class="filePre">
-        <el-card class="filePre-card">
+        <el-card class="filePre-card ">
           <div slot="header" class="clearfix">
             <span class="h1Txt">文件预览</span>
             <span>&nbsp;</span>
@@ -36,34 +36,40 @@
         </el-card>
       </div>
       <div class="toolsDiv">
-        <el-card class="filePre-card">
+        <el-card class="filePre-card  tools-card">
           <div slot="header" class="clearfix">
             <i class="el-icon-s-operation"></i>
             <span class="h1Txt">参数配置</span>
-          <el-tag class="infoTags" size="mini" type="info">{{ `总分段：${textData.length}` }}</el-tag>
-          <el-tag class="infoTags" size="mini" type="info">{{ `总字数 ${textNum}` }}</el-tag>
+            <el-tag class="infoTags" size="mini" type="info">{{ `总分段：${textData.length}` }}</el-tag>
+            <el-tag class="infoTags" size="mini" type="info">{{ `总字数 ${textNum}` }}</el-tag>
           </div>
           <div class="halfDiv">
-          <span class="h3Txt">理想分块长度</span>
-          <br>
-          <!-- <el-input-number class="inputNumbe" v-model="chunkSize" controls-position="right"></el-input-number> -->
-          <div class="slider-value">{{ chunkSize }}</div>
-          <el-slider class="custom-slider" v-model="chunkSize" :show-tooltip="false" :max="textNum">
-          </el-slider>
+            <span class="h3Txt">理想分块长度: {{ chunkSize }}</span>
+            <!-- <el-input-number class="inputNumbe" v-model="chunkSize" controls-position="right"></el-input-number> -->
+            <!-- <div class="slider-value"></div> -->
+            <el-slider class="custom-slider" v-model="chunkSize" :show-tooltip="false" :max="textNum">
+            </el-slider>
           </div>
 
           <div class="halfDiv">
-          <span class="h3Txt">理想重叠长度</span>
-          <br>
-          <!-- <el-input-number class="inputNumbe" v-model="overlap" controls-position="right"></el-input-number> -->
-          <div class="slider-value">{{ overlap }}</div>
-          <el-slider class="custom-slider" v-model="overlap" :show-tooltip="false":max="chunkSize">
-          </el-slider>
+            <span class="h3Txt">理想重叠长度: {{ overlap }}</span>
+            <!-- <el-input-number class="inputNumbe" v-model="overlap" controls-position="right"></el-input-number> -->
+            <!-- <div class="slider-value">/div> -->
+            <el-slider class="custom-slider" v-model="overlap" :show-tooltip="false" :max="chunkSize">
+            </el-slider>
+          </div>
+          <div class="halfDiv">
+            <span class="h3Txt">自定义分割符: {{ SplitSybs }}</span>
+            <el-input v-model="SplitSybs" size="small" :placeholder="SplitSybs"></el-input>
+            <!-- <el-input-number class="inputNumbe" v-model="overlap" controls-position="right"></el-input-number> -->
+            <!-- <div class="slider-value">/div> -->
+            <!-- <el-slider class="custom-slider" v-model="overlap" :show-tooltip="false" :max="chunkSize"> -->
+            <!-- </el-slider> -->
           </div>
           <!-- </div> -->
-          <el-button class="buts" size="small" type="primary" @click="textChunkClk">开始分割</el-button>
+          <el-button class="buts" size="small" type="primary" @click="textChunkClk" icon="el-icon-search">开始分割</el-button>
 
-          <el-button class="buts" size="small" type="primary" @click="confirmClk">确认导入</el-button>
+          <el-button class="buts" size="small" type="primary" @click="confirmClk" icon="el-icon-search">确认导入</el-button>
 
         </el-card>
       </div>
@@ -143,13 +149,14 @@ export default {
     return {
       pdfPagesNum: 0,
       currentpage: 2,
-      textNum: 100,
+      textNum: 600,
       editingIndex: null,
+      SplitSybs:"",
       pdfUrl: '',
       fileName: '',
       rate: 1,
       textData: [],
-      chunkSize: 200,
+      chunkSize: 300,
       overlap: 50,
       selectedText: '',
       contextMenu: {
@@ -301,7 +308,7 @@ export default {
 
         const nonOverlap = currentText.slice(prevOverlap.length, currentText.length - nextOverlap.length);
 
-        textNum+=nonOverlap.length;
+        textNum += nonOverlap.length;
         result.push({
           index: parseInt(i),
           sentence: currentText,
@@ -310,7 +317,7 @@ export default {
           nextOverlap: nextOverlap,
         });
       }
-      this.textNum=textNum;
+      this.textNum = textNum;
       return result;
     },
     close() {
@@ -460,10 +467,10 @@ export default {
     if (this.curFileName != '') {
       _this.fileChange(_this.curFileName + '.pdf')
     }
-    // this.$bus.$on('curFileName', (val) => {
-    //   _this.fileName = val;
-    //   // _this.fileChange(_this.fileName);
-    // });
+    this.$bus.$on('curFileName', (val) => {
+      _this.curFileName = val;
+      _this.fileChange(_this.curFileName);
+    });
   },
 } 
 </script>

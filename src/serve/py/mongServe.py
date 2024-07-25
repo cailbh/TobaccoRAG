@@ -40,6 +40,15 @@ def fetch_data_findone_db(collectionName,key,value):
         res = [doc for doc in data]
     return res
 
+def updata_data_findone_db(collectionName,key,value,news):
+     # 获取集合
+    collection = db[collectionName]
+    myquery = {key: value}
+    newvalues = {"$set": news}
+    
+    collection.update_one(myquery, newvalues)
+    return 'success'
+
 def fetch_data_find_db(collectionName,key,value):
      # 获取集合
     collection = db[collectionName]

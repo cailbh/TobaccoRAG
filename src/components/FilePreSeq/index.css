@@ -99,18 +99,24 @@
   justify-content: center;
 }
 .h1Txt{
+  font-family: "Arial","Microsoft YaHei","黑体","宋体",sans-serif;
+
   color: #696969;
   font-weight: 800;
   font-size: 20px;
 }
 .h2Txt{
+  font-family: "Arial","Microsoft YaHei","黑体","宋体",sans-serif;
+
   color: #696969;
   font-weight: 500;
   font-size: 18px;
 }
 .h3Txt{
-  color: #696969;
-  font-weight: 400;
+  font-family: "Arial","Microsoft YaHei","黑体","宋体",sans-serif;
+
+  color: #747474;
+  font-weight: 00;
   font-size: 15px;
 }
 .filePre{
@@ -126,7 +132,7 @@
 .fileTxt{
   float: left;
   width: 60%;
-  height: 70%;
+  height: 79%;
   overflow: auto;
 }
 .box-card {
@@ -135,13 +141,17 @@
 }
 .halfDiv{
   float: left;
-  width: 35%;
+  width: 25%;
   height: 100%;
+  line-height: 150%;
 }
 .filePre-card{
   margin: 2px;
   height: calc(100% - 10px);
   width: calc(100% - 10px);
+}
+.tools-card{
+  background: linear-gradient(48deg, #f0f4f8, #d9e2ec, #bcccdc, #bccee1, #d0e3f4);
 }
 
 .paginationDiv{
@@ -179,8 +189,8 @@
 }
 
 .buts{
-  float: left;
-  /* margin: 10px; */
+  float: right;
+  margin: 25px 7px;
 }
 .chunkButs{
   float: right;
@@ -254,10 +264,9 @@
 }
 .custom-slider {
   float: left;
-  width: 300px;
+  width: 200px;
 }
 .slider-value {
   float: left;
-  width: 50px;
   line-height: 220%;
 }

@@ -53,7 +53,18 @@ body {
     box-shadow: 3px 2px 4px 1px rgba(0, 0, 0, 0.3);
     /* background-color: rgb(84, 92, 100); */
 }
-
+#headTxt {
+  width: 400px;
+    font-size: 45px;
+    font-weight: bold;
+    line-height: 130%;
+    text-align: center;
+    letter-spacing: 20px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, rgb(21, 55, 136), #23ccff, rgb(76, 111, 242));
+    -webkit-background-clip: text;
+    color: transparent;
+}
 #menuDiv{
 
     float: left;

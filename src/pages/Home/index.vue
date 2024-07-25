@@ -10,7 +10,6 @@
         <div id="headTxt">
           智能问答系统
         </div>
-        <!-- MOOC2Graph -->
         <div class="navs">
           <el-menu class="el-menu-demo navs" mode="horizontal">
             <el-menu-item index="1">About</el-menu-item>
@@ -18,12 +17,6 @@
             <el-menu-item index="3">Help</el-menu-item>
           </el-menu>
         </div>
-        <!-- <b-nav class="navs" tabs fill>
-        <b-nav-item>About |</b-nav-item>
-        <b-nav-item>Contact |</b-nav-item>
-        <b-nav-item>?Help</b-nav-item>
-        <b-nav-item disabled>Disabled</b-nav-item>
-      </b-nav> -->
       </div>
       <div id="menuDiv">
         <el-menu :default-active="defaultActive" class="el-menu" @open="handleOpen" @close="handleClose" @select="select"
