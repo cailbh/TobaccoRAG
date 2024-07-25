@@ -146,7 +146,7 @@ def word2seq():
     file = request.json.get('file')    
     overlap = request.json.get('overlap')
     chunkSize = request.json.get('chunkSize')
-    path = file_path+file
+    path = file_path+file+".doc"
     word = myTools.read_word_file(path)
     # single_sentences_list = remove_newline_items(re.split(r'(?<=[。.?!\n\n])\s+', word))
 

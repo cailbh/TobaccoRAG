@@ -3,30 +3,121 @@
   <div class="FilePreSeqPanel" ref="FilePreSeqPanel">
     <div id="FilePreSeqHead">
       <div class="fileTxtHead">
-        <el-button class="buts" size="small" type="primary" @click="textChunkClk">开始分割</el-button>
-        <el-button class="buts" size="small" type="primary" @click="confirmClk">确认</el-button>
       </div>
+    </div>
+    <div v-if="contextMenu.visible" :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }"
+      class="context-menu">
+      <ul>
+        <li @click="addSelectText(contextMenu.index)">添加</li>
+        <!-- <li @click="deleteText(contextMenu.index)">删除</li> -->
+      </ul>
     </div>
     <div id="FilePreSeqBody">
       <div class="filePre">
-        <div class="pdfContainer" ref="bodypanel" style="overflow-y: auto;overflow-x: hidden;">
-          <div class="canvasContainer" style="position: relative;width: 100%;height: 100%;">
-            <canvas ref="renderContext"></canvas>
+        <el-card class="filePre-card">
+          <div slot="header" class="clearfix">
+            <span class="h1Txt">文件预览</span>
+            <span>&nbsp;</span>
+            <span class="h2Txt">{{ curFileName }}</span>
           </div>
-        </div>
+          <div class="pdfContainer" ref="bodypanel" style="overflow-y: auto;overflow-x: hidden;">
+            <div class="canvasContainer" style="position: relative;width: 100%;height: 100%;">
+              <canvas ref="renderContext"></canvas>
+            </div>
+          </div>
+          <div class="paginationDiv">
+            <el-row justify="center" style="transform: translate(0,0px);">
+              <el-col :span="24">
+                <el-pagination layout="prev, pager, next" small background :total="pdfPagesNum"
+                  @current-change="currentChange" />
+              </el-col>
+            </el-row>
+          </div>
+        </el-card>
       </div>
-      <div class="paginationDiv">
-        <el-row justify="center" style="transform: translate(0,0px);">
-          <el-col :span="24">
-            <el-pagination layout="prev, pager, next" small background :total="pdfPagesNum"
-              @current-change="currentChange" />
-          </el-col>
-        </el-row>
+      <div class="toolsDiv">
+        <el-card class="filePre-card">
+          <div slot="header" class="clearfix">
+            <i class="el-icon-s-operation"></i>
+            <span class="h1Txt">参数配置</span>
+          <el-tag class="infoTags" size="mini" type="info">{{ `总分段：${textData.length}` }}</el-tag>
+          <el-tag class="infoTags" size="mini" type="info">{{ `总字数 ${textNum}` }}</el-tag>
+          </div>
+          <div class="halfDiv">
+          <span class="h3Txt">理想分块长度</span>
+          <br>
+          <!-- <el-input-number class="inputNumbe" v-model="chunkSize" controls-position="right"></el-input-number> -->
+          <div class="slider-value">{{ chunkSize }}</div>
+          <el-slider class="custom-slider" v-model="chunkSize" :show-tooltip="false" :max="textNum">
+          </el-slider>
+          </div>
+
+          <div class="halfDiv">
+          <span class="h3Txt">理想重叠长度</span>
+          <br>
+          <!-- <el-input-number class="inputNumbe" v-model="overlap" controls-position="right"></el-input-number> -->
+          <div class="slider-value">{{ overlap }}</div>
+          <el-slider class="custom-slider" v-model="overlap" :show-tooltip="false":max="chunkSize">
+          </el-slider>
+          </div>
+          <!-- </div> -->
+          <el-button class="buts" size="small" type="primary" @click="textChunkClk">开始分割</el-button>
+
+          <el-button class="buts" size="small" type="primary" @click="confirmClk">确认导入</el-button>
+
+        </el-card>
       </div>
       <div class="fileTxt" ref="fileTest">
         <div class="fileTxtBody">
           <el-card v-for="item in textData" :key="item.index" class="box-card">
-            <el-input type="textarea" autosize placeholder="" v-model="item.sentence">
+            <!-- <el-input type="textarea" autosize placeholder="" v-model="item.sentence">
+            </el-input> -->
+            <div slot="header" class="clearfix">
+              <el-tag type="info">{{ `#chunk ${item.index + 1}` }}</el-tag>
+              <!-- <span class="h1Txt">{{ item.index }}</span> -->
+              <el-button class="chunkButs" size="small" type="primary" plain
+                @click="deleteText(item.index)">删除</el-button>
+
+              <el-button class="chunkButs" size="small" type="primary" plain
+                @click="editText(item.index)">编辑</el-button>
+
+              <el-button class="chunkButs" size="small" type="primary" plain @click="addText(item.index)">新增</el-button>
+              <template v-if="mergeHoverIndex != item.index">
+                <el-button class="chunkButs split-button" size="small" type="primary" plain
+                  @mouseover.native="mergeButHover(item.index)"
+                  @mouseleave.native="mergeButLeave(item.index)">合并</el-button>
+              </template>
+              <div class="chunkButsDiv" v-else @mouseleave="mergeButLeave(item.index)">
+                <el-button class="chunkButs1" size="small" type="primary" plain @click="merageUpText(item.index)"
+                  icon="el-icon-caret-top"></el-button>
+                <el-button class="chunkButs1" size="small" type="primary" plain @click="merageDownText(item.index)"
+                  icon="el-icon-caret-bottom"></el-button>
+              </div>
+
+            </div>
+            <!-- <p class="formatted-text1" @mouseup="handleSelection">
+              {{ item.prevOverlap }}
+            </p>
+            <p class="formatted-text" @click="editText" @mouseup="handleSelection">
+              {{ item.nonOverlap }}
+            </p>
+            <p class="formatted-text1" @mouseup="handleSelection">
+              {{ item.nextOverlap }}
+            </p> -->
+            <p class="formatted-text1" v-if="editingIndex != item.index"
+              @contextmenu.prevent="showContextMenu($event, item.index)" @click="pClk()" @mouseup="handleSelection">
+              {{ item.prevOverlap }}
+            </p>
+            <p class="formatted-text" v-if="editingIndex != item.index"
+              @contextmenu.prevent="showContextMenu($event, item.index)" @click="pClk()" @mouseup="handleSelection">
+              {{ item.nonOverlap }}
+            </p>
+            <p class="formatted-text1" v-if="editingIndex != item.index"
+              @contextmenu.prevent="showContextMenu($event, item.index)" @click="pClk()" @mouseup="handleSelection">
+              {{ item.nextOverlap }}
+            </p>
+            <el-input v-else ref="input" @blur="saveText" type="textarea" autosize placeholder=""
+              v-model="item.sentence">
             </el-input>
             <!-- <div :key="o" class="text item">
               {{ item.sentence }}
@@ -52,10 +143,22 @@ export default {
     return {
       pdfPagesNum: 0,
       currentpage: 2,
+      textNum: 100,
+      editingIndex: null,
       pdfUrl: '',
       fileName: '',
       rate: 1,
       textData: [],
+      chunkSize: 200,
+      overlap: 50,
+      selectedText: '',
+      contextMenu: {
+        visible: false,
+        x: 0,
+        y: 0,
+        index: null
+      },
+      mergeHoverIndex: null,
     };
   },
   watch: {
@@ -64,6 +167,152 @@ export default {
     }
   },
   methods: {
+    mergeButHover(index) {
+      this.mergeHoverIndex = index;
+    },
+    mergeButLeave() {
+      this.mergeHoverIndex = null;
+    },
+    showContextMenu(event, index) {
+      event.preventDefault(); // 防止默认的上下文菜单出现
+      console.log(event)
+      this.contextMenu = {
+        visible: true,
+        x: event.layerX + 10,
+        y: event.layerY + 50,
+        index: index
+      };
+    },
+    editText(index) {
+      this.editingIndex = index;
+      this.contextMenu.visible = false;
+      this.$nextTick(() => {
+        this.$refs.input[0].focus();
+      });
+    },
+    updataChunk(data) {
+      this.textData = this.processTexts(data);
+      console.log("data", this.textData)
+    },
+    pClk() {
+      this.contextMenu.visible = false;
+    },
+    deleteText(index) {
+      this.textData.splice(index, 1);
+      this.updataChunk(this.textData);
+      this.contextMenu.visible = false;
+    },
+    addText(index) {
+      this.textData.splice(index, 0, { 'sentence': '' });
+      this.updataChunk(this.textData);
+      this.contextMenu.visible = false;
+    },
+    merageUpText(index) {
+      const _this = this;
+      if (index != 0) {
+        this.textData.splice(index - 1, 2, { 'sentence': _this.textData[index - 1]['sentence'] + _this.textData[index]['sentence'] });
+        this.updataChunk(this.textData);
+        this.contextMenu.visible = false;
+        this.mergeHoverIndex = null;
+        this.editingIndex = null;
+      }
+    },
+    merageDownText(index) {
+      const _this = this;
+      if (index != this.textData.length - 1) {
+        this.textData.splice(index, 2, { 'sentence': _this.textData[index]['sentence'] + _this.textData[index + 1]['sentence'] });
+        this.updataChunk(this.textData);
+        this.contextMenu.visible = false;
+        this.mergeHoverIndex = null;
+        this.editingIndex = null;
+      }
+    },
+    splitText(longText, shortText) {
+      // 找到短文本在长文本中的起始位置
+      const startIndex = longText.indexOf(shortText);
+
+      if (startIndex === -1) {
+        throw new Error("");
+      }
+
+      // 计算短文本的结束位置
+      const endIndex = startIndex + shortText.length;
+
+      // 分割长文本为三部分
+      const beforeText = longText.substring(0, startIndex);
+      const middleText = shortText;
+      const afterText = longText.substring(endIndex);
+
+      return [
+        beforeText,
+        middleText,
+        afterText
+      ]
+    },
+    addSelectText(index) {
+      const _this = this;
+      let data = this.splitText(_this.textData[index]['sentence'], _this.selectedText);
+      this.textData.splice(index, 1);
+      if (data[2] != "")
+        this.textData.splice(index, 0, { 'sentence': data[2] })
+      if (data[1] != "")
+        this.textData.splice(index, 0, { 'sentence': data[1] })
+      if (data[0] != "")
+        this.textData.splice(index, 0, { 'sentence': data[0] })
+      this.updataChunk(this.textData);
+      this.contextMenu.visible = false;
+    },
+    saveText() {
+      this.editingIndex = null;
+    },
+    handleSelection() {
+      const selectedText = window.getSelection().toString();
+      if (selectedText) {
+        this.selectedText = selectedText;
+      } else {
+        this.selectedText = "";
+      }
+    },
+    findOverlap(text1, text2) {
+      let overlap = '';
+      for (let i = 0; i < text1.length; i++) {
+        for (let j = text2.length; j > 0; j--) {
+          if (text1.slice(-i) === text2.slice(0, j)) {
+            overlap = text1.slice(-i);
+            break;
+          }
+        }
+        if (overlap) break;
+      }
+      return overlap;
+    },
+    processTexts(texts) {
+      if (texts.length === 0) return [];
+
+      const result = [];
+      let textNum = 0;
+      for (let i = 0; i < texts.length; i++) {
+        const prevText = i > 0 ? texts[i - 1]['sentence'] : '';
+        const currentText = texts[i]['sentence'];
+        const nextText = i < texts.length - 1 ? texts[i + 1]['sentence'] : '';
+
+        const prevOverlap = this.findOverlap(prevText, currentText);
+        const nextOverlap = this.findOverlap(currentText, nextText);
+
+        const nonOverlap = currentText.slice(prevOverlap.length, currentText.length - nextOverlap.length);
+
+        textNum+=nonOverlap.length;
+        result.push({
+          index: parseInt(i),
+          sentence: currentText,
+          prevOverlap: prevOverlap,
+          nonOverlap: nonOverlap,
+          nextOverlap: nextOverlap,
+        });
+      }
+      this.textNum=textNum;
+      return result;
+    },
     close() {
       this.FilePreSeqShow = false;
     },
@@ -74,9 +323,9 @@ export default {
     },
     textChunkClk() {
       const _this = this;
-      let chunkSize = 300;
-      let overlap = 80;
-      let fileName = this.fileName
+      let chunkSize = this.chunkSize;
+      let overlap = this.overlap;
+      let fileName = this.curFileName;
       this.$http
         .post("/api/wordToSeq", { file: fileName, overlap: overlap, chunkSize: chunkSize }, {
           headers: {
@@ -84,22 +333,37 @@ export default {
           }
         })
         .then((res) => {
-          let seqData = res.body;
-          _this.textData = seqData;
+          let seqData = res.body
+          _this.updataChunk(seqData);
+          // _this.$message({
+          //   message: '文本分割完成',
+          //   type: 'success'
+          // });
+          _this.$notify({
+            title: '文本分割完成',
+            type: 'success',
+            message: '文本分割完成,请确认后添加至知识库'
+          });
         });
     },
     confirmClk() {
       const _this = this;
       this.$http
-        .post("/api/seqToVec", { textData: _this.textData, fileName: _this.fileName }, {
+        .post("/api/seqToVec", { textData: _this.textData, fileName: _this.curFileName }, {
           headers: {
             'Content-Type': 'application/json'
           }
         })
         .then((res) => {
-          _this.$message({
-            message: '成功建立向量数据库',
-            type: 'success'
+          // _this.$message({
+          //   message: '成功建立向量数据库',
+          //   type: 'success'
+          // });
+
+          _this.$notify({
+            title: '保存成功',
+            type: 'success',
+            message: '当前数据已添加至知识库'
           });
         });
     },
@@ -139,7 +403,7 @@ export default {
         })
         .then((response) => {
           console.log("getFileTextSeq", response.body);
-          _this.textData = response.body;
+          _this.updataChunk(response.body);
           // }
         });
     },
@@ -196,10 +460,10 @@ export default {
     if (this.curFileName != '') {
       _this.fileChange(_this.curFileName + '.pdf')
     }
-    this.$bus.$on('curFileName', (val) => {
-      _this.fileName = val;
-      _this.fileChange(_this.fileName)
-    });
+    // this.$bus.$on('curFileName', (val) => {
+    //   _this.fileName = val;
+    //   // _this.fileChange(_this.fileName);
+    // });
   },
 } 
 </script>

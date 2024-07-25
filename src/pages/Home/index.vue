@@ -27,7 +27,7 @@
       </div>
       <div id="menuDiv">
         <el-menu :default-active="defaultActive" class="el-menu" @open="handleOpen" @close="handleClose" @select="select"
-          background-color="#545c64" text-color="#fff" active-text-color="#ffd04b">
+          background-color="rgb(244, 244, 247)" text-color="rgb(156, 158, 161)" active-text-color="rgb(64, 110, 245)">
           <el-menu-item index="1">
             <template slot="title">
               <i class="el-icon-upload"></i>

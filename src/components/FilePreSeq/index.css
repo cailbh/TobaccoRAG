@@ -4,7 +4,7 @@
 }
 
 #FilePreSeqHead {
-  height: 50px;
+  height: 0px;
   width: 100%;
   background-color: rgb(255, 255, 255);
   border-bottom: solid 1px #e6e6e6;
@@ -13,7 +13,7 @@
 
 #FilePreSeqBody {
   width: 100%;
-  height: calc(100% - 54px);
+  height: calc(100% - 4px);
   position: absolute;
   bottom: 0;
   overflow: auto;
@@ -97,4 +97,167 @@
 .canvasContainer{
   display: flex;
   justify-content: center;
+}
+.h1Txt{
+  color: #696969;
+  font-weight: 800;
+  font-size: 20px;
+}
+.h2Txt{
+  color: #696969;
+  font-weight: 500;
+  font-size: 18px;
+}
+.h3Txt{
+  color: #696969;
+  font-weight: 400;
+  font-size: 15px;
+}
+.filePre{
+  float: left;
+  width: 40%;
+  height: 100%;
+}
+.toolsDiv{
+  float: left;
+  width: 60%;
+  height: 20%;
+}
+.fileTxt{
+  float: left;
+  width: 60%;
+  height: 70%;
+  overflow: auto;
+}
+.box-card {
+  margin: 4px;
+  width: calc(50% - 10px);
+}
+.halfDiv{
+  float: left;
+  width: 35%;
+  height: 100%;
+}
+.filePre-card{
+  margin: 2px;
+  height: calc(100% - 10px);
+  width: calc(100% - 10px);
+}
+
+.paginationDiv{
+  position: absolute;
+  bottom: 10px;
+  left: 10%;
+}
+.fileview{
+  width:30%;
+  height: calc(100% - 4px);
+  border: 1px solid #ddd;
+  float: left;
+  margin-top: 2px;
+}
+.pdfContainer{
+  width:100%;
+  height: calc(100% - 30px);
+}
+.fileTxtBody{
+  width: 100%;
+    height: calc(100% - 50px);
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+    align-content: flex-start;
+
+}
+.fileTxtHead{
+  width: 100%;
+  height: 50px;
+}
+.inputNumbe{
+  width: 100px;
+}
+
+.buts{
+  float: left;
+  /* margin: 10px; */
+}
+.chunkButs{
+  float: right;
+  margin: 0px 10px;
+}
+.chunkButs1{
+  float: right;
+  margin: 0px 0px !important;
+  padding: 3px !important;
+  height: 15.8px;
+  width: 55.6px;
+}
+.chunkButsDiv{
+  float: right;
+  width: 20px;
+  height: 100%;
+}
+.formatted-text::selection {
+  background-color: #00ff9c; 
+  color: #000000;
+  text-shadow: 0 0 10px #00ff9c; 
+}
+.formatted-text {
+  white-space: pre-wrap; /* 保留空格和换行符 */
+  font-family: inherit; /* 保持字体一致 */
+  font-size: inherit; /* 保持字体大小一致 */
+  line-height: inherit; /* 保持行高一致 */
+}
+.formatted-text1 {
+  white-space: pre-wrap; /* 保留空格和换行符 */
+  font-family: inherit; /* 保持字体一致 */
+  font-size: inherit; /* 保持字体大小一致 */
+  line-height: inherit; /* 保持行高一致 */
+  color: #007BFF;
+}
+.infoTags{
+  margin: 10px;
+}
+.context-menu {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  z-index: 1000;
+}
+.context-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.context-menu li {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.context-menu li:hover {
+  background: #f0f0f0;
+}
+.split-button {
+  position: relative;
+}
+.split-button > .el-button {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.split-button > .el-button + .el-button {
+  left: 50%;
+}
+.split-button > .el-button:hover {
+  z-index: 1;
+}
+.custom-slider {
+  float: left;
+  width: 300px;
+}
+.slider-value {
+  float: left;
+  width: 50px;
+  line-height: 220%;
 }

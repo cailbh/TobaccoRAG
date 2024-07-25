@@ -4,6 +4,8 @@
 <template>
   <div class="FileManagerPanel">
     <div class="panelHead">
+            <i class="el-icon-s-shop"></i>
+      知识库
     </div>
     <div id="FileManagerPanelDiv" class="panelBody" ref="FileManagerPanelDiv">
       <el-table v-show="tableShow" :data="tableData" style="width: 100%" :row-class-name="tableRowClassName">

@@ -2,7 +2,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 def RCSplit(word,chunkSize,overlap):
     text_splitter = RecursiveCharacterTextSplitter(
-        # Set a really small chunk size, just to show.
         chunk_size=chunkSize,
         chunk_overlap=overlap,
         length_function=len,
