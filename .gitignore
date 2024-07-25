@@ -22,3 +22,4 @@ pnpm-debug.log*
 *.sln
 *.sw?
 /src/serve/py/bge-large-zh-v1.5
+/src/serve/py/__pycache__
