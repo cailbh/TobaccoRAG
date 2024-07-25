@@ -53,8 +53,28 @@ export default {
     close() {
       this.AuxiliaryShow = false;
     },
-    goPreview(fileName,text) {
-      console.log(fileName,text)
+    //将string转化为数组
+    StringToArray(str) {
+      // 去除字符串两端的方括号
+      const trimmedStr = str.replace(/^\[|\]$/g, '');
+      // 按逗号分隔字符串，并去除空格
+      const innerArrays = trimmedStr.split(',').map(item => item.trim());
+      // 将每个数字字符串转换为数字，并重新组合成数组
+      const doubleArray = innerArrays.map(innerArray => {
+        // 去除每个子数组的方括号
+        const numbers = innerArray.replace(/^\[|\]$/g, '').split(',');
+        return numbers;
+      });
+      return doubleArray;
+    },
+    Highlight(x, y, width, height, ctx) {
+      ctx.fillStyle = "rgba(255, 237, 0, .8)";
+      ctx.fillRect(x, y, width, height);
+    },
+    goPreview(fileName, text) {
+      let _this = this
+
+      console.log(fileName, text)
       axios({
         method: "post",
         responseType: "blob",
@@ -75,21 +95,21 @@ export default {
           // webkit or chrome
           this.pdfUrl = window.webkitURL.createObjectURL(blob);
         }
-        console.log(res,res.headers.pagenumber)
-        this.getPdf(this.pdfUrl,parseInt(res.headers.pagenumber));
+        console.log(res, res.headers.pagenumber)
+        this.getPdf(this.pdfUrl, parseInt(res.headers.pagenumber), _this.StringToArray(res.headers.pagerects));
         // docx.renderAsync(data, this.$refs.fileTest); // 渲染到页面
       });
     },
-    getPdf(url, pageNum) {
+    getPdf(url, pageNum, hightlightRect) {
 
       PDFJS.getDocument(url).promise.then((pdfDoc) => {
         this.pdfPagesNum = pdfDoc.numPages * 10; // pdf的总页数
         //获取第pageNum页的数据
         this.readerpdfDoc = pdfDoc;
-        this.showPdf(pdfDoc, pageNum)
+        this.showPdf(pdfDoc, pageNum, hightlightRect)
       });
     },
-    showPdf(pdfDoc, pageNum) {
+    showPdf(pdfDoc, pageNum, hightlightRect) {
       let that = this;
       console.log(pdfDoc, pageNum)
       pdfDoc.getPage(pageNum).then((page) => {
@@ -97,32 +117,40 @@ export default {
         // 设置canvas相关的属性
         const canvas = this.$refs.renderContext;
         if (canvas) {
-        const ctx = canvas.getContext("2d");
-        const dpr = window.devicePixelRatio || 1;
-        const bsr =
-          ctx.webkitBackingStorePixelRatio ||
-          ctx.mozBackingStorePixelRatio ||
-          ctx.msBackingStorePixelRatio ||
-          ctx.oBackingStorePixelRatio ||
-          ctx.backingStorePixelRatio ||
-          1;
-        const ratio = dpr / bsr;
-        const viewport = page.getViewport({ scale: that.rate });
-        canvas.width = viewport.width * ratio;
-        canvas.height = viewport.height * ratio;
-        console.log(viewport, canvas.width)
-        canvas.style.width = viewport.width + "px";
-        canvas.style.height = viewport.height + "px";
-        //canvas.style.transform="translate(-20px,-30px)";
-        // canvas.style["z-index"]="-1";
-        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-        const context = {
-          canvasContext: ctx,
-          viewport: viewport,
-        };
-        // 数据渲染到canvas画布上
-        page.render(context);
-      }
+          const ctx = canvas.getContext("2d");
+          const dpr = window.devicePixelRatio || 1;
+          const bsr =
+            ctx.webkitBackingStorePixelRatio ||
+            ctx.mozBackingStorePixelRatio ||
+            ctx.msBackingStorePixelRatio ||
+            ctx.oBackingStorePixelRatio ||
+            ctx.backingStorePixelRatio ||
+            1;
+          const ratio = dpr / bsr;
+          const viewport = page.getViewport({ scale: that.rate });
+          canvas.width = viewport.width * ratio;
+          canvas.height = viewport.height * ratio;
+          console.log(viewport, canvas.width)
+          canvas.style.width = viewport.width + "px";
+          canvas.style.height = viewport.height + "px";
+          //canvas.style.transform="translate(-20px,-30px)";
+          // canvas.style["z-index"]="-1";
+          ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+          const context = {
+            canvasContext: ctx,
+            viewport: viewport,
+          };
+          // 数据渲染到canvas画布上
+          const renderTask = page.render(context);
+
+          // 添加高亮
+          renderTask.promise.then(function () {
+            console.log(hightlightRect)
+            for (let i = 0; i < hightlightRect.length; i += 4)
+              // 渲染完成后的回调
+              that.Highlight(hightlightRect[i], hightlightRect[i + 1], hightlightRect[i + 2], hightlightRect[i + 3], ctx); // 调用高亮函数
+          });
+        }
       });
     },
     startDrag(event) {
@@ -218,7 +246,7 @@ export default {
     let path = this.path;
     this.$bus.$on('quote', (val) => {
       _this.fileName = val;
-      _this.goPreview(val.fileName,val.sentence)
+      _this.goPreview(val.fileName, val.sentence)
       _this.AuxiliaryShow = true;
     });
     // this.goPreview(path,fileName);

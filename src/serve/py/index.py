@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify,make_response,send_file,Response
+from flask import Flask, request, jsonify, make_response, send_file, Response
 from flask_cors import CORS
 import os
 import io
@@ -7,6 +7,7 @@ import subprocess
 import time
 import fitz  # PyMuPDF
 import win32com.client as win32
+
 app = Flask(__name__)
 CORS(app)
 import pythoncom
@@ -20,13 +21,16 @@ import numpy as np
 import ast
 from bson import ObjectId, json_util
 
-file_path = 'D:/Cailibuhong/Tobacco/py/data/杭烟营销中心各类标准文件/'
+file_path = "./data/杭烟营销中心各类标准文件/"
+
 
 def convert_word_to_pdf(input_path, output_path):
     pythoncom.CoInitialize()
     # 创建Word应用程序实例
-    pdf_file = os.path.join(output_path, os.path.splitext(os.path.basename(input_path))[0] + '.pdf')
-    word_app = win32.gencache.EnsureDispatch('Word.Application')
+    pdf_file = os.path.join(
+        output_path, os.path.splitext(os.path.basename(input_path))[0] + ".pdf"
+    )
+    word_app = win32.gencache.EnsureDispatch("Word.Application")
     # 设置应用程序可见性为False（不显示Word界面）
     word_app.Visible = False
     try:
@@ -45,7 +49,9 @@ def convert_word_to_pdf(input_path, output_path):
 
 
 def convert_ofd_to_pdf(ofd_file, output_dir):
-    pdf_file = os.path.join(output_dir, os.path.splitext(os.path.basename(ofd_file))[0] + '.pdf')
+    pdf_file = os.path.join(
+        output_dir, os.path.splitext(os.path.basename(ofd_file))[0] + ".pdf"
+    )
     doc = fitz.open(ofd_file)
     pdf_bytes = doc.convert_to_pdf()
     with open(pdf_file, "wb") as f:
@@ -61,10 +67,12 @@ def convert_ofd_to_pdf(ofd_file, output_dir):
 #     else:
 #         raise ValueError("Unsupported file format. Only .docx, .doc and .ofd files are supported.")
 
+
 # 确保上传目录存在
 def ensure_directory_exists(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
+
 
 def find_text_page_in_pdf(pdf_path, text):
     """
@@ -75,7 +83,7 @@ def find_text_page_in_pdf(pdf_path, text):
         print(page_num)
         page = document.load_page(page_num)
         print(page)
-        words = re.split(r'(?<=[  ，。。、.?!\n])', text)
+        words = re.split(r"(?<=[  ，。。、.?!\n])", text)
         listW = myTools.remove_newline_items(words)
         print(listW)
         lenWords = len(words)
@@ -83,48 +91,74 @@ def find_text_page_in_pdf(pdf_path, text):
         for w in words:
             text_instances = page.search_for(w)
             if text_instances:
-                lenSearchWord +=1
-        if lenSearchWord/lenWords >=0.5:
-            return page_num+1   # 页码从 1 开始
-    return 2
+                lenSearchWord += 1
+        if lenSearchWord / lenWords >= 0.5:
+            return page_num + 1  # 页码从 1 开始
+    return 0
 
-@app.route('/filePre', methods=['POST'])
+
+def find_text_in_pdf(pdf_path, page_num, text):
+    """
+    在 PDF 文件的指定页面中查找文字并返回矩形块
+    """
+    document = fitz.open(pdf_path)
+    # 检查页面号是否有效
+    if page_num < 1 or page_num > len(document):
+        return -1
+
+    page = document.load_page(page_num - 1)
+    words = re.split(r"(?<=[  ，。。、.?!\n])", text)
+    res = []
+    for w in words:
+        text_instances = page.search_for(w)
+        if text_instances:
+            # 获取搜索结果的具体信息
+            for t in text_instances:
+                x0, y0, x1, y1 = t
+            temp_text = [x0, y0, x1 - x0, y1 - y0]
+            res.append(temp_text)
+    return res
+
+
+@app.route("/filePre", methods=["POST"])
 def file_pre():
-    file = request.args.get('file')
-    text = request.args.get('text')
+    file = request.args.get("file")
+    text = request.args.get("text")
     outpath = file_path
-    pdf_path = f'{outpath}/{file}.pdf'
+    pdf_path = f"{outpath}/{file}.pdf"
     pdf_blob = myTools.read_pdf_as_blob(pdf_path)
-    response = Response(io.BytesIO(pdf_blob), mimetype='application/pdf')
-    response.headers.set('Content-Disposition', 'attachment', filename='sample.pdf')
+    response = Response(io.BytesIO(pdf_blob), mimetype="application/pdf")
+    response.headers.set("Content-Disposition", "attachment", filename="sample.pdf")
     page = find_text_page_in_pdf(pdf_path, text)
-    response.headers.set('PageNumber', page)
+    response.headers.set("PageNumber", page)
     print(page)
+    pagerects = find_text_in_pdf(pdf_path, page, text)
+    response.headers.set("PageRects", pagerects)
     return response
-   
 
-@app.route('/fileUpload', methods=['POST'])
+
+@app.route("/fileUpload", methods=["POST"])
 def file_upload():
-    file = request.args.get('file')
+    file = request.args.get("file")
     file_name = file.split(".")[1]
     file_name_ori = file.split(".")[0]
-    path = file_path+file
+    path = file_path + file
     outpath = file_path
-    pdf_path = f'{outpath}/{file_name_ori}.pdf'
+    pdf_path = f"{outpath}/{file_name_ori}.pdf"
 
     # 集合名称
-    collection_name = 'fileList'
-    oriFileData = mg.fetch_data_findone_db(collection_name,"fileName",file_name_ori)
+    collection_name = "fileList"
+    oriFileData = mg.fetch_data_findone_db(collection_name, "fileName", file_name_ori)
     if oriFileData == None:
-        mg.insert_data(collection_name, [{"fileName":file_name_ori}])
+        mg.insert_data(collection_name, [{"fileName": file_name_ori}])
 
     if os.path.exists(pdf_path):
         pdf_blob = myTools.read_pdf_as_blob(pdf_path)
-        response = Response(io.BytesIO(pdf_blob), mimetype='application/pdf')
-        response.headers.set('Content-Disposition', 'attachment', filename='sample.pdf')
+        response = Response(io.BytesIO(pdf_blob), mimetype="application/pdf")
+        response.headers.set("Content-Disposition", "attachment", filename="sample.pdf")
         return response
     else:
-            # return send_file(f'{file_path}/{file}', as_attachment=True)
+        # return send_file(f'{file_path}/{file}', as_attachment=True)
         # 执行文件转换
         convert_word_to_pdf(path, outpath)
 
@@ -132,43 +166,42 @@ def file_upload():
         for _ in range(30):  # 检查 30 次，每次等待 1 秒，总计 30 秒
             if os.path.exists(pdf_path):
                 pdf_blob = myTools.read_pdf_as_blob(pdf_path)
-                response = Response(io.BytesIO(pdf_blob), mimetype='application/pdf')
-                response.headers.set('Content-Disposition', 'attachment', filename='sample.pdf')
+                response = Response(io.BytesIO(pdf_blob), mimetype="application/pdf")
+                response.headers.set(
+                    "Content-Disposition", "attachment", filename="sample.pdf"
+                )
                 return response
             time.sleep(1)
 
-        return jsonify({'error': 'File conversion timeout'}), 500
+        return jsonify({"error": "File conversion timeout"}), 500
 
-    
 
-@app.route('/wordToSeq', methods=['POST'])
+@app.route("/wordToSeq", methods=["POST"])
 def word2seq():
-    file = request.json.get('file')    
-    overlap = request.json.get('overlap')
-    chunkSize = request.json.get('chunkSize')
-    path = file_path+file
+    file = request.json.get("file")
+    overlap = request.json.get("overlap")
+    chunkSize = request.json.get("chunkSize")
+    path = file_path + file
     word = myTools.read_word_file(path)
     # single_sentences_list = remove_newline_items(re.split(r'(?<=[。.?!\n\n])\s+', word))
 
     # sentences = [{'sentence': x, 'index': i} for i, x in enumerate(single_sentences_list)]
-    sentences = getSeq.RCSplit(word,chunkSize,overlap)
+    sentences = getSeq.RCSplit(word, chunkSize, overlap)
     return jsonify(sentences)
 
 
-@app.route('/seqToVec', methods=['POST'])
+@app.route("/seqToVec", methods=["POST"])
 def seq2vec():
-    textData = request.json.get('textData')   
-    fileName = request.json.get('fileName') .split(".")[0]
-    embeddings = sentence2Vec.embedding_generate([x['sentence'] for x in textData])
+    textData = request.json.get("textData")
+    fileName = request.json.get("fileName").split(".")[0]
+    embeddings = sentence2Vec.embedding_generate([x["sentence"] for x in textData])
     for i, sentence in enumerate(textData):
-        sentence['fileName'] = str(fileName)
-        sentence['sentence_embedding'] = str([x for x in embeddings[i]])
+        sentence["fileName"] = str(fileName)
+        sentence["sentence_embedding"] = str([x for x in embeddings[i]])
     # 集合名称
-    collection_name = 'SeqVector'
+    collection_name = "SeqVector"
     mg.insert_data(collection_name, textData)
-    return jsonify(['success'])
-
-
+    return jsonify(["success"])
 
 
 def find_most_similar_vectors(vector_array, target_vector, top_n=5):
@@ -181,38 +214,44 @@ def find_most_similar_vectors(vector_array, target_vector, top_n=5):
     :return: list, 最相似向量的索引及其相似度
     """
     # 计算目标向量与向量数组中每个向量的余弦相似度
-    similarities = cosine_similarity(vector_array, target_vector.reshape(1, -1)).flatten()
-    
+    similarities = cosine_similarity(
+        vector_array, target_vector.reshape(1, -1)
+    ).flatten()
+
     # 获取最相似的前 top_n 个向量的索引
     most_similar_indices = similarities.argsort()[-top_n:][::-1]
-    
+
     # 返回最相似向量的索引及其相似度
-    most_similar_vectors = [(index, similarities[index]) for index in most_similar_indices]
+    most_similar_vectors = [
+        (index, similarities[index]) for index in most_similar_indices
+    ]
     return most_similar_vectors
 
 
-@app.route('/getFileList', methods=['GET'])
+@app.route("/getFileList", methods=["GET"])
 def getFileList():
-    collection_name = 'fileList'
+    collection_name = "fileList"
     filiList = mg.fetch_alldata_db(collection_name)
     return jsonify(filiList)
 
-@app.route('/getFileTextSeq', methods=['POST'])
+
+@app.route("/getFileTextSeq", methods=["POST"])
 def getFileTextSeq():
-    fileName = request.json.get('fileName').split(".")[0]
-    collection_name = 'SeqVector'
-    filiList = mg.fetch_data_find_db(collection_name,"fileName",fileName)
+    fileName = request.json.get("fileName").split(".")[0]
+    collection_name = "SeqVector"
+    filiList = mg.fetch_data_find_db(collection_name, "fileName", fileName)
     return jsonify(filiList)
 
-@app.route('/QA', methods=['POST'])
+
+@app.route("/QA", methods=["POST"])
 def QandA():
-    questions = request.json.get('questions')    
+    questions = request.json.get("questions")
     print(questions)
     queVec = sentence2Vec.embedding_generate(questions)
-    
-    collection_name = 'SeqVector'
+
+    collection_name = "SeqVector"
     allData = mg.fetch_vectors_from_db(collection_name)
-    vector_data = [ast.literal_eval(doc['sentence_embedding']) for doc in allData]
+    vector_data = [ast.literal_eval(doc["sentence_embedding"]) for doc in allData]
     # # 将向量数据转换为 numpy 数组
     vector_array = np.array(vector_data)
     target_vector = np.array(queVec)
@@ -224,30 +263,34 @@ def QandA():
         vector_doc["_id"] = str(vector_doc["_id"])
         # vector_doc = mg.fetch_data_findone_db(collection_name,'index',int(index))
         most_similar_data.append(vector_doc)
-    
-    outKnowledge = ''
-    for da in most_similar_data:
-        outKnowledge += da['sentence']
-    messages = []
-    client = ZhipuAI(api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj")  # 填写您自己的APIKey
 
-    prompts = '你是一名烟草公司的数据管理人员，需要对用户的问题精准得回答，下面是你的资料：\n'+outKnowledge
-    
-    user_input = prompts+"下面是用户的问题，请回答："+questions
+    outKnowledge = ""
+    for da in most_similar_data:
+        outKnowledge += da["sentence"]
+    messages = []
+    client = ZhipuAI(
+        api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
+    )  # 填写您自己的APIKey
+
+    prompts = (
+        "你是一名烟草公司的数据管理人员，需要对用户的问题精准得回答，下面是你的资料：\n"
+        + outKnowledge
+    )
+
+    user_input = prompts + "下面是用户的问题，请回答：" + questions
     print(user_input)
-    answers = '11'
+    answers = "11"
     print(type(most_similar_data))
     # -----------------------------------------------------------
     messages += [{"role": "user", "content": user_input}]
     response = client.chat.completions.create(
-        model="glm-4",  # 填写需要调用的模型名称
-        messages=messages
+        model="glm-4", messages=messages  # 填写需要调用的模型名称
     )
     response_message = response.choices[0].message.content
     answers = str(response_message)
     # -----------------------------------------------------------
-    return jsonify({"answers":answers,"quote":list(most_similar_data)})
+    return jsonify({"answers": answers, "quote": list(most_similar_data)})
+
 
 if __name__ == "__main__":
-    app.run(debug=True,port=3000)
-
+    app.run(debug=True, port=3000)
