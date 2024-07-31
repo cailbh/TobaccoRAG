@@ -21,7 +21,8 @@ import numpy as np
 import ast
 from bson import ObjectId, json_util
 
-file_path = 'D:\Work\YanCao\TobaccoRAG\data/杭烟营销中心各类标准文件/'
+file_path = "./data/杭烟营销中心各类标准文件/"
+
 
 def convert_word_to_pdf(input_path, output_path):
     pythoncom.CoInitialize()
@@ -107,8 +108,10 @@ def find_text_in_pdf(pdf_path, page_num, text):
 
     page = document.load_page(page_num - 1)
     words = re.split(r"(?<=[  ，。。、.?!\n])", text)
+    listW = myTools.remove_newline_items(words)
+
     res = []
-    for w in words:
+    for w in listW:
         text_instances = page.search_for(w)
         if text_instances:
             # 获取搜索结果的具体信息
@@ -146,11 +149,11 @@ def file_upload():
     pdf_path = f"{outpath}/{file_name_ori}.pdf"
 
     # 集合名称
-    collection_name = 'fileList'
-    oriFileData = mg.fetch_data_findone_db(collection_name,"fileName",file_name_ori)
-    print(collection_name,"fileName",file_name_ori,oriFileData)
+    collection_name = "fileList"
+    oriFileData = mg.fetch_data_findone_db(collection_name, "fileName", file_name_ori)
+    print(collection_name, "fileName", file_name_ori, oriFileData)
     if (oriFileData == None) | (oriFileData == []):
-        mg.insert_data(collection_name, [{"fileName":file_name_ori}])
+        mg.insert_data(collection_name, [{"fileName": file_name_ori}])
 
     if os.path.exists(pdf_path):
         pdf_blob = myTools.read_pdf_as_blob(pdf_path)
@@ -210,12 +213,12 @@ def seq2vec():
     mg.insert_data(collection_name, textData)
 
     # 集合名称
-    collection_name = 'fileList'
-    oriFileData = mg.updata_data_findone_db(collection_name,"fileName",fileName,{'chunkLen':len(textData)})
+    collection_name = "fileList"
+    oriFileData = mg.updata_data_findone_db(
+        collection_name, "fileName", fileName, {"chunkLen": len(textData)}
+    )
 
-    return jsonify(['success'])
-
-
+    return jsonify(["success"])
 
 
 def find_most_similar_vectors(vector_array, target_vector, top_n=5):
@@ -242,6 +245,69 @@ def find_most_similar_vectors(vector_array, target_vector, top_n=5):
     return most_similar_vectors
 
 
+def find_similar_vectors(vector_array, target_vector, top_n, holdValue):
+    """
+    在向量数组中查找与目标向量最相似的前几个向量
+    找到前n个其中前n个向量的相似度相加大于等于1
+
+    :param vector_array: np.ndarray, 向量数组，形状为 (num_vectors, vector_dim)
+    :param target_vector: np.ndarray, 目标向量，形状为 (vector_dim,)
+    :param top_n: int, 要查找的最相似向量的数量
+    :return: list, 最相似向量的索引及其相似度
+    """
+    # 计算目标向量与向量数组中每个向量的余弦相似度
+    similarities = cosine_similarity(
+        vector_array, target_vector.reshape(1, -1)
+    ).flatten()
+
+    # 排序
+    sorted_indices = similarities.argsort()
+
+    # 阈值
+    nowValue = 0.0
+    nValue = 0
+
+    while nowValue <= holdValue and nValue <= top_n:
+        nValue += 1
+        nowValue += similarities[sorted_indices[-nValue]]
+
+    # 获取最相似的前 top_n 个向量的索引
+    most_similar_indices = sorted_indices[-nValue:][::-1]
+
+    # 返回最相似向量的索引及其相似度
+    most_similar_vectors = [
+        (index, similarities[index]) for index in most_similar_indices
+    ]
+    print("most_similar_vectors:", most_similar_vectors)
+    return most_similar_vectors
+
+
+def wordVec(questions, holdValue):
+    queVec = sentence2Vec.embedding_generate(questions)
+
+    collection_name = "SeqVector"
+    allData = mg.fetch_vectors_from_db(collection_name)
+    vector_data = [ast.literal_eval(doc["sentence_embedding"]) for doc in allData]
+    # # 将向量数据转换为 numpy 数组
+    vector_array = np.array(vector_data)
+    target_vector = np.array(queVec)
+    # most_similar = find_most_similar_vectors(vector_array, target_vector, top_n=3)
+    top_n = 5
+    most_similar = find_similar_vectors(vector_array, target_vector, top_n, holdValue)
+
+    most_similar_data = []
+    for index, similarity in most_similar:
+        vector_doc = allData[index]
+        vector_doc["_id"] = str(vector_doc["_id"])
+        # vector_doc = mg.fetch_data_findone_db(collection_name,'index',int(index))
+        most_similar_data.append(vector_doc)
+
+    outKnowledge = ""
+    for da in most_similar_data:
+        outKnowledge += da["sentence"]
+    return (outKnowledge, most_similar_data)
+
+
 @app.route("/getFileList", methods=["GET"])
 def getFileList():
     collection_name = "fileList"
@@ -261,26 +327,14 @@ def getFileTextSeq():
 def QandA():
     questions = request.json.get("questions")
     print(questions)
-    queVec = sentence2Vec.embedding_generate(questions)
 
-    collection_name = "SeqVector"
-    allData = mg.fetch_vectors_from_db(collection_name)
-    vector_data = [ast.literal_eval(doc["sentence_embedding"]) for doc in allData]
-    # # 将向量数据转换为 numpy 数组
-    vector_array = np.array(vector_data)
-    target_vector = np.array(queVec)
-    most_similar = find_most_similar_vectors(vector_array, target_vector, top_n=3)
+    searchWay = request.json.get("searchWay")
+    searchWeight = request.json.get("searchWeight")
 
-    most_similar_data = []
-    for index, similarity in most_similar:
-        vector_doc = allData[index]
-        vector_doc["_id"] = str(vector_doc["_id"])
-        # vector_doc = mg.fetch_data_findone_db(collection_name,'index',int(index))
-        most_similar_data.append(vector_doc)
+    # 选择检索方法
+    if searchWay == 1:
+        (outKnowledge, most_similar_data) = wordVec(questions, searchWeight)
 
-    outKnowledge = ""
-    for da in most_similar_data:
-        outKnowledge += da["sentence"]
     messages = []
     client = ZhipuAI(
         api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
