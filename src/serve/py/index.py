@@ -181,12 +181,19 @@ def word2seq():
     file = request.json.get("file")
     overlap = request.json.get("overlap")
     chunkSize = request.json.get("chunkSize")
+    SplitType = request.json.get("SplitType")
     path = file_path + file
     word = myTools.read_word_file(path)
     # single_sentences_list = remove_newline_items(re.split(r'(?<=[。.?!\n\n])\s+', word))
 
     # sentences = [{'sentence': x, 'index': i} for i, x in enumerate(single_sentences_list)]
-    sentences = getSeq.RCSplit(word, chunkSize, overlap)
+    # sentences = getSeq.RCSplit(word, chunkSize, overlap)
+    sentence = []
+    print(SplitType)
+    if SplitType == 0:
+        sentences = getSeq.RCSplit(word, chunkSize, overlap)
+    else:
+        sentences = getSeq.split_documentByOriChunk(word)
     return jsonify(sentences)
 
 
@@ -286,7 +293,8 @@ def QandA():
 
     user_input = prompts + "下面是用户的问题，请回答：" + questions
     print(user_input)
-    answers = "11"
+    answers = ''
+    # answers = "卷烟货源供应方式在提供的资料中没有直接说明，但可以根据常规的商业操作推断，卷烟货源供应通常有以下几种方式：1. **直接供应**：烟草公司直接向零售客户供应卷烟，这通常涉及配送中心发放促销品给零售商，如资料中第十九条所述，依据审批程序和《卷烟促销品领用单》进行。2. **分销网络供应**：通过建立分销网络，烟草公司可以通过分销商或批发商向零售商供应卷烟。3. **电商平台供应**：随着技术的发展，烟草公司也可能通过官方电商平台或合作第三方电商平台，如资料中提到的“香溢家”APP，进行线上供应。4. **库存管理供应**：烟草公司会定期对促销品进行盘库，如资料中第二十条所述，确保库存与帐目相符，从而有效管理货源供应。在供应过程中，烟草公司会考虑到促销活动的类型（如品规培育性活动或退市卸库性活动），合理安排货源，以满足市场需求，同时确保促销活动的合规性。促销活动的具体方式包括线上促销和线下促销，这些活动都会对货源供应产生影响。若需要具体了解卷烟货源供应的详细信息，建议参考烟草公司提供的具体操作手册或直接咨询烟草公司的相关部门。"
     print(type(most_similar_data))
     # -----------------------------------------------------------
     messages += [{"role": "user", "content": user_input}]

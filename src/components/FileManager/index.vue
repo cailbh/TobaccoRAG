@@ -3,53 +3,59 @@
 
 <template>
   <div class="FileManagerPanel">
-    <div class="panelHead">
-            <i class="el-icon-s-shop"></i>
-      知识库
-    </div>
-    <div id="FileManagerPanelDiv" class="panelBody" ref="FileManagerPanelDiv">
-      <el-table v-show="tableShow" :data="tableData" style="width: 100%" :row-class-name="tableRowClassName">
-        <el-table-column label="序号" width="70">
-          <template slot-scope="scope">
-            <i class="el-icon-document"></i>
-            <span style="margin-left: 10px">{{ scope.row.sort }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="文档标题">
-          <template slot-scope="scope">
-            <!-- <el-popover trigger="hover" placement="top"> -->
-            <!-- <p>姓名: {{ scope.row.name }}</p>
+    <el-card class="FileManagerPanelDiv">
+
+      <div slot="header" class="clearfix">
+        <div class="panelHead">
+          <i class="el-icon-s-shop"></i>
+          知识库
+        </div>
+      </div>
+
+      <div id="FileManagerPanelDiv" class="panelBody" ref="FileManagerPanelDiv">
+        <el-table max-height="800" v-show="tableShow" :data="tableData" style="width: 100%" :row-class-name="tableRowClassName">
+          <el-table-column label="序号" width="70">
+            <template slot-scope="scope">
+              <i class="el-icon-document"></i>
+              <span style="margin-left: 10px">{{ scope.row.sort }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="文档标题">
+            <template slot-scope="scope">
+              <!-- <el-popover trigger="hover" placement="top"> -->
+              <!-- <p>姓名: {{ scope.row.name }}</p>
               <p>住址: {{ scope.row.address }}</p> -->
-            <div slot="reference" class="name-wrapper">
-              <span style="margin-left: 10px">{{ scope.row.name }}</span>
-            </div>
-            <!-- </el-popover> -->
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" fixed="right" width="200">
-          <template slot-scope="scope">
-            <el-button size="mini" @click="handleEdit(scope.$index, scope.row)">查看</el-button>
-            <el-button size="mini" @click="handleDelete(scope.$index, scope.row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <div v-show="preShow" class="preDiv">
+              <div slot="reference" class="name-wrapper">
+                <span style="margin-left: 10px">{{ scope.row.name }}</span>
+              </div>
+              <!-- </el-popover> -->
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" fixed="right" width="200">
+            <template slot-scope="scope">
+              <el-button size="mini" @click="handleEdit(scope.$index, scope.row)">查看</el-button>
+              <el-button size="mini" @click="handleDelete(scope.$index, scope.row)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div v-show="preShow" class="preDiv">
           <div class="tagWrap">
             <!-- <div > -->
-              <!-- <TagControl state="file" :curTag="currentTagData"></TagControl> -->
-              <!-- </div> -->
+            <!-- <TagControl state="file" :curTag="currentTagData"></TagControl> -->
+            <!-- </div> -->
           </div>
           <div class="docWrap">
             <div ref="file"></div>
           </div>
-      </div>
-      <div class="chartTooltip">
-        <p>
-          <br /><strong class="name"></strong>
-        </p>
-      </div>
+        </div>
+        <div class="chartTooltip">
+          <p>
+            <br /><strong class="name"></strong>
+          </p>
+        </div>
 
-    </div>
+      </div>
+    </el-card>
   </div>
 </template>
 
@@ -67,31 +73,31 @@ const docx = require("docx-preview");
 import axios from "axios";
 export default {
   props: [],
-  components:{},
+  components: {},
   data() {
     return {
       colorMap: {},
-      tableShow:true,
-      preShow:false,
-      chooseTagsId:'',
+      tableShow: true,
+      preShow: false,
+      chooseTagsId: '',
       fileData: [],
       tableData: [],
-      currentTagData:'',
-      currentFile:''
+      currentTagData: '',
+      currentFile: ''
     };
   },
   watch: {
     type(val) {
     },
-    currentTagData(val){
+    currentTagData(val) {
     },
     fileData(val) {
       const _this = this;
       let tableData = []
-      val.forEach((element,index)=> {
+      val.forEach((element, index) => {
         let temp = {
-          id:element['_id'],
-          sort: index+1,
+          id: element['_id'],
+          sort: index + 1,
           name: element['fileName'],
           fileName: element['fileName'],
         }
@@ -143,7 +149,7 @@ export default {
   mounted() {
     const _this = this
     this.$bus.$on('currentTagData', (val) => {
-      _this.currentTagData  = val;
+      _this.currentTagData = val;
     });
   },
   // beforeDestroy() {

@@ -42,8 +42,14 @@
             <span class="h1Txt">参数配置</span>
             <el-tag class="infoTags" size="mini" type="info">{{ `总分段：${textData.length}` }}</el-tag>
             <el-tag class="infoTags" size="mini" type="info">{{ `总字数 ${textNum}` }}</el-tag>
+
+            <el-button class="buts1" size="small" type="primary" @click="dgShowClk"
+              icon="el-icon-s-claim">递归分割</el-button>
+
+            <el-button class="buts1" size="small" type="primary" @click="gsShowClk"
+              icon="el-icon-s-order">格式分割</el-button>
           </div>
-          <div class="halfDiv">
+          <div class="halfDiv" v-show="dgShow">
             <span class="h3Txt">理想分块长度: {{ chunkSize }}</span>
             <!-- <el-input-number class="inputNumbe" v-model="chunkSize" controls-position="right"></el-input-number> -->
             <!-- <div class="slider-value"></div> -->
@@ -51,14 +57,14 @@
             </el-slider>
           </div>
 
-          <div class="halfDiv">
+          <div class="halfDiv"v-show="dgShow">
             <span class="h3Txt">理想重叠长度: {{ overlap }}</span>
             <!-- <el-input-number class="inputNumbe" v-model="overlap" controls-position="right"></el-input-number> -->
             <!-- <div class="slider-value">/div> -->
             <el-slider class="custom-slider" v-model="overlap" :show-tooltip="false" :max="chunkSize">
             </el-slider>
           </div>
-          <div class="halfDiv">
+          <div class="halfDiv" v-show="dgShow">
             <span class="h3Txt">自定义分割符: {{ SplitSybs }}</span>
             <el-input v-model="SplitSybs" size="small" :placeholder="SplitSybs"></el-input>
             <!-- <el-input-number class="inputNumbe" v-model="overlap" controls-position="right"></el-input-number> -->
@@ -66,10 +72,31 @@
             <!-- <el-slider class="custom-slider" v-model="overlap" :show-tooltip="false" :max="chunkSize"> -->
             <!-- </el-slider> -->
           </div>
+          <div class="halfDiv" v-show="gsShow">
+            <span class="h3Txt">父块分割符: {{ SplitSybsChart }}</span>
+            <el-input v-model="SplitSybs" size="small" style="width: 200px;":placeholder="SplitSybsChart"></el-input>
+            <!-- <el-input-number class="inputNumbe" v-model="overlap" controls-position="right"></el-input-number> -->
+            <!-- <div class="slider-value">/div> -->
+            <!-- <el-slider class="custom-slider" v-model="overlap" :show-tooltip="false" :max="chunkSize"> -->
+            <!-- </el-slider> -->
+          </div>
+          <div class="halfDiv" v-show="gsShow">
+            <span class="h3Txt">子块分割符: {{ SplitSybsArt }}</span>
+            <el-input v-model="SplitSybs" size="small" style="width: 200px;;" :placeholder="SplitSybsArt"></el-input>
+            <!-- <el-input-number class="inputNumbe" v-model="overlap" controls-position="right"></el-input-number> -->
+            <!-- <div class="slider-value">/div> -->
+            <!-- <el-slider class="custom-slider" v-model="overlap" :show-tooltip="false" :max="chunkSize"> -->
+            <!-- </el-slider> -->
+          </div>
           <!-- </div> -->
-          <el-button class="buts" size="small" type="primary" @click="textChunkClk" icon="el-icon-search">开始分割</el-button>
+          <el-button v-show="gsShow" class="buts" size="small" type="primary" @click="textChunkClk"
+            icon="el-icon-s-opportunity">开始分割</el-button>
 
-          <el-button class="buts" size="small" type="primary" @click="confirmClk" icon="el-icon-search">确认导入</el-button>
+          <el-button v-show="gsShow" class="buts" size="small" type="primary" @click="confirmClk" icon="el-icon-upload">确认导入</el-button>
+          <el-button v-show="dgShow" class="buts" size="small" type="primary" @click="textChunkClk"
+            icon="el-icon-s-opportunity">开始分割</el-button>
+
+          <el-button v-show="dgShow" class="buts" size="small" type="primary" @click="confirmClk" icon="el-icon-upload">确认导入</el-button>
 
         </el-card>
       </div>
@@ -147,11 +174,16 @@ export default {
   components: {},
   data() {
     return {
+      dgShow:true,
+      gsShow:false,
       pdfPagesNum: 0,
       currentpage: 2,
       textNum: 600,
       editingIndex: null,
       SplitSybs:"",
+      SplitSybsChart:"章",
+      SplitSybsArt:"条",
+      SplitType:0,
       pdfUrl: '',
       fileName: '',
       rate: 1,
@@ -174,6 +206,16 @@ export default {
     }
   },
   methods: {
+    dgShowClk(){
+      this.dgShow = true;
+      this.gsShow = false;
+      this.SplitType = 0;
+    },
+    gsShowClk(){
+      this.gsShow = true;
+      this.dgShow = false;
+      this.SplitType = 1;
+    },
     mergeButHover(index) {
       this.mergeHoverIndex = index;
     },
@@ -333,8 +375,9 @@ export default {
       let chunkSize = this.chunkSize;
       let overlap = this.overlap;
       let fileName = this.curFileName;
+      let SplitType = this.SplitType;
       this.$http
-        .post("/api/wordToSeq", { file: fileName, overlap: overlap, chunkSize: chunkSize }, {
+        .post("/api/wordToSeq", { file: fileName, overlap: overlap, chunkSize: chunkSize,SplitType: SplitType}, {
           headers: {
             'Content-Type': 'application/json'
           }
