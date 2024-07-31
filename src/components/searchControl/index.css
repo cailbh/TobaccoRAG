@@ -1,0 +1,21 @@
+.searchControl {
+    position: relative;
+    margin-top: -40px;
+}
+
+.block {
+    margin-top: 30px;
+}
+
+.block .title {
+    line-height: 24px;
+    font-size: 18px;
+    color: #303133;
+}
+
+.dialog-footer {
+    display: flex;
+    justify-content: center;
+
+    margin-top: 50px;
+}

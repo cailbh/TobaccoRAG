@@ -1,9 +1,9 @@
 <template>
     <div class="chat-window">
         <!-- 显示聊天消息的容器 -->
-         <div>
+        <div>
             <Auxiliary></Auxiliary>
-         </div>
+        </div>
         <div class="message-container">
             <div v-for="message in messages" :key="message.id" class="message">
                 <div v-if="message.isMe" class="isMe">
@@ -31,18 +31,20 @@
                             <span><el-avatar icon="el-icon-user-solid"></el-avatar>GPT</span>
                             <el-button style="float: right; padding: 3px 0" type="text"></el-button>
                         </div> -->
-                        <div class="chatText">{{ message.text }}</div> 
-                        <el-button v-for="(item, index) in message.quote" :key="index" type="text" @click="quoteClk(item)">{{ (index+1) }}</el-button>
+                        <div class="chatText">{{ message.text }}</div>
+                        <el-button v-for="(item, index) in message.quote" :key="index" type="text"
+                            @click="quoteClk(item)">{{ (index + 1) }}</el-button>
                     </el-card>
                 </div>
             </div>
         </div>
         <!-- 输入消息的表单 -->
         <div class="input-form">
+            <searchControl @searchChange="searchChange"></searchControl>
+
             <el-input type="textarea" :autosize="{ minRows: 4, maxRows: 4 }" placeholder="请输入内容" v-model="inputText">
             </el-input>
-            <el-button class="subBut" size="mini" @click="submit" icon="el-icon-upload2" type="primary"
-                circle>
+            <el-button class="subBut" size="mini" @click="submit" icon="el-icon-upload2" type="primary" circle>
             </el-button>
         </div>
     </div>
@@ -50,28 +52,32 @@
 
 <script>
 import Auxiliary from '@/components/Auxiliary/index.vue';
-export default { 
-    components: {Auxiliary},
+import searchControl from '@/components/searchControl/index.vue';
+
+export default {
+    components: { Auxiliary, searchControl },
     data() {
         return {
             inputText: '',
             messages: [
-                { id: 1, text: '你好,我有什么可以帮助你的吗？', isMe: false,quote:[]},
+                { id: 1, text: '你好,我有什么可以帮助你的吗？', isMe: false, quote: [] },
             ],
+            searchWay: 1,
+            searchWeight: 1
         };
     },
     methods: {
-        quoteClk(val){
-            this.$bus.$emit("quote",val);
+        quoteClk(val) {
+            this.$bus.$emit("quote", val);
         },
         submit() {
             const _this = this;
             if (this.inputText.trim()) {
                 let questions = _this.inputText;
                 this.messages.push({ id: Date.now(), text: this.inputText, isMe: true });
-                this.inputText = ''; 
+                this.inputText = '';
                 this.$http
-                    .post("/api/QA", { questions: questions,}, {
+                    .post("/api/QA", { questions: questions, searchWay: this.searchWay, searchWeight: this.searchWeight }, {
                         headers: {
                             'Content-Type': 'application/json'
                         }
@@ -81,11 +87,19 @@ export default {
                         let data = res.body;
                         let ans = data['answers'];
                         let quote = data['quote'];
-                        console.log("quote",quote);
-                        this.messages.push({ id: Date.now(), text: ans, isMe: false, quote:quote });
+                        console.log("quote", quote);
+                        this.messages.push({ id: Date.now(), text: ans, isMe: false, quote: quote });
                     });
             }
         },
+        searchChange(val, weight) {
+            let list = ["关键词匹配", "相似度度量", "欧氏距离度量", "大模型优化提问", "预回答检索"]
+
+            this.searchWay = list.findIndex(i => i == val)
+            this.searchWeight = weight
+
+            console.log(this.searchWay, this.searchWeight)
+        }
     },
 };
 </script>
