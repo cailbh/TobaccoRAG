@@ -1,6 +1,6 @@
 <!--  -->
 <template>
-    <div class="searchControl">
+    <div class="searchControl" style="width: 120px;">
         <el-button type="text" @click="dialog = true">设置文件检索策略</el-button>
 
         <el-dialog title="设置文件检索策略" :visible.sync="dialog" :append-to-body="true" :modal-append-to-body="false"
@@ -9,9 +9,12 @@
                 <el-radio v-for="(search, index) in searchList" :label="search">{{ search }}</el-radio>
             </el-radio-group>
 
-            <div class="block" v-if="checkedSearch == '相似度度量'">
+            <div class="block">
                 <span class="title">设置检索强度</span>
-                <el-slider v-model="weight" show-input :min="1" :max="10" :step="0.1">
+                <el-slider v-model="weight" show-input :min="1" :max="10" :step="0.1" v-if="checkedSearch == '相似度度量'">
+                </el-slider>
+                <el-slider v-model="weight" show-input :min="1" :max="10" :step="1"
+                    v-else-if="checkedSearch == '关键词匹配'">
                 </el-slider>
             </div>
 
@@ -52,6 +55,15 @@ export default {
 
             this.dialog = false;
         },
+    },
+    watch: {
+        checkedSearch: {
+            handler(newval, oldval) {
+                this.weight = 1
+            },
+            deep: true,
+            immediate: true
+        }
     }
 }
 </script>

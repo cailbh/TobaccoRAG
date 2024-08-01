@@ -7,6 +7,7 @@ import subprocess
 import time
 import fitz  # PyMuPDF
 import win32com.client as win32
+import jieba  # 分词
 
 app = Flask(__name__)
 CORS(app)
@@ -94,7 +95,9 @@ def find_text_page_in_pdf(pdf_path, text):
                 lenSearchWord += 1
         if lenSearchWord / lenWords >= 0.5:
             return page_num + 1  # 页码从 1 开始
-    return 0
+
+    # 没找到返回0
+    return 1
 
 
 def find_text_in_pdf(pdf_path, page_num, text):
@@ -103,7 +106,7 @@ def find_text_in_pdf(pdf_path, page_num, text):
     """
     document = fitz.open(pdf_path)
     # 检查页面号是否有效
-    if page_num < 1 or page_num > len(document):
+    if page_num <= 1 or page_num > len(document):
         return -1
 
     page = document.load_page(page_num - 1)
@@ -260,7 +263,7 @@ def find_similar_vectors(vector_array, target_vector, top_n, holdValue):
     nowValue = 0.0
     nValue = 0
 
-    while nowValue <= holdValue and nValue <= top_n:
+    while nowValue <= holdValue and nValue < top_n:
         nValue += 1
         nowValue += similarities[sorted_indices[-nValue]]
 
@@ -275,6 +278,61 @@ def find_similar_vectors(vector_array, target_vector, top_n, holdValue):
     return most_similar_vectors
 
 
+"""
+检索方法函数
+"""
+
+
+def remove_special_characters(strings):
+    """
+    处理掉列表中的特殊字符
+    """
+    special_characters = "!@#$%^&*()_+{}[]|\:;'<>?,./\"，；。？！”“的了呢么吗"
+    return [
+        string
+        for string in strings
+        if not any(char in special_characters for char in string)
+    ]
+
+
+# 关键词检索
+def keyWord(questions, holdValue):
+    # 先把questions分割成几个关键词
+    questionsList = remove_special_characters(jieba.lcut_for_search(questions))
+    print("分词结果", questionsList)
+    # 处理掉空格和标点符号
+
+    # 获取数据
+    collection_name = "SeqVector"
+    allData = mg.fetch_vectors_from_db(collection_name)
+
+    weight = [0] * len(allData)
+    # 然后在各个部分查找这些词语
+    for q in questionsList:
+        for i in range(len(allData)):
+            if q in allData[i]["sentence"]:
+                weight[i] += 1
+
+    # 排序
+    sortedWeight = np.array(weight).argsort()
+    most_similar_indices = sortedWeight[-holdValue:][::-1]
+    print(most_similar_indices)
+    most_similar_sentences = [(index, allData[index]) for index in most_similar_indices]
+    # print(most_similar_sentences)
+    most_similar_data = []
+    for index, sentence in most_similar_sentences:
+        vector_doc = allData[index]
+        vector_doc["_id"] = str(vector_doc["_id"])
+        # vector_doc = mg.fetch_data_findone_db(collection_name,'index',int(index))
+        most_similar_data.append(vector_doc)
+
+    outKnowledge = ""
+    for da in most_similar_data:
+        outKnowledge += da["sentence"]
+    return (outKnowledge, most_similar_data)
+
+
+# 相似度检索
 def wordVec(questions, holdValue):
     queVec = sentence2Vec.embedding_generate(questions)
 
@@ -325,6 +383,8 @@ def QandA():
     searchWeight = request.json.get("searchWeight")
 
     # 选择检索方法
+    if searchWay == 0:
+        (outKnowledge, most_similar_data) = keyWord(questions, searchWeight)
     if searchWay == 1:
         (outKnowledge, most_similar_data) = wordVec(questions, searchWeight)
 
