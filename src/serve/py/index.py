@@ -244,7 +244,7 @@ def find_most_similar_vectors(vector_array, target_vector, top_n=5):
 def find_similar_vectors(vector_array, target_vector, top_n, holdValue):
     """
     在向量数组中查找与目标向量最相似的前几个向量
-    找到前n个其中前n个向量的相似度相加大于等于1
+    找到前n个其中前n个向量的相似度相加大于等于holdValue
 
     :param vector_array: np.ndarray, 向量数组，形状为 (num_vectors, vector_dim)
     :param target_vector: np.ndarray, 目标向量，形状为 (vector_dim,)
@@ -359,6 +359,101 @@ def wordVec(questions, holdValue):
     return (outKnowledge, most_similar_data)
 
 
+# 欧氏距离
+def euDistance(questions, holdValue):
+    queVec = sentence2Vec.embedding_generate(questions)
+
+    collection_name = "SeqVector"
+    allData = mg.fetch_vectors_from_db(collection_name)
+    vector_data = [ast.literal_eval(doc["sentence_embedding"]) for doc in allData]
+    # # 将向量数据转换为 numpy 数组
+    vector_array = np.array(vector_data)
+    target_vector = np.array(queVec)
+
+    euclidean_distance = []
+    for vec in vector_array:
+        # 使用 NumPy 的 linalg 模块计算欧氏距离
+        euclidean_distance.append(np.linalg.norm(vec - target_vector.reshape(1, -1)))
+
+    print(euclidean_distance)
+
+    # 排序
+    sorted_euclidean_distance = np.array(euclidean_distance).argsort()
+
+    # 阈值
+    nowValue = 0.0
+    nValue = 0
+
+    while nowValue <= holdValue:
+        nowValue += euclidean_distance[sorted_euclidean_distance[nValue]]
+        nValue += 1
+
+    # 获取最相似的前 top_n 个向量的索引
+    most_similar_indices = sorted_euclidean_distance[:nValue]
+
+    # 返回最相似向量的索引及其相似度
+    most_similar_distance = [
+        (index, euclidean_distance[index]) for index in most_similar_indices
+    ]
+    print("most_similar_distance:", most_similar_distance)
+
+    most_similar_data = []
+    for index, similarity in most_similar_distance:
+        vector_doc = allData[index]
+        vector_doc["_id"] = str(vector_doc["_id"])
+        # vector_doc = mg.fetch_data_findone_db(collection_name,'index',int(index))
+        most_similar_data.append(vector_doc)
+
+    outKnowledge = ""
+    for da in most_similar_data:
+        outKnowledge += da["sentence"]
+    return (outKnowledge, most_similar_data)
+
+
+def reQuery(questions, holdValue):
+    client = ZhipuAI(
+        api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
+    )  # 填写您自己的APIKey
+    # 优化提问
+    messages = []
+    user_input = (
+        "你是一名烟草公司的数据管理人员，需要对用户的问题重新表达\n下面是用户的问题，请对其进行重新表述："
+        + questions
+    )
+    messages += [{"role": "user", "content": user_input}]
+
+    response = client.chat.completions.create(
+        model="glm-4", messages=messages  # 填写需要调用的模型名称
+    )
+    response_message = response.choices[0].message.content
+    print(response_message)
+
+    new_questions = questions + "\n" + response_message
+    return wordVec(new_questions, holdValue)
+
+
+def subAnswer(questions, holdValue):
+    client = ZhipuAI(
+        api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
+    )  # 填写您自己的APIKey
+    # 优化提问
+    messages = []
+    user_input = (
+        "你是一名烟草公司的数据管理人员，需要对用户的问题精准的回答\n下面是用户的问题，请回答："
+        + questions
+    )
+    messages += [{"role": "user", "content": user_input}]
+
+    response = client.chat.completions.create(
+        model="glm-4", messages=messages  # 填写需要调用的模型名称
+    )
+    response_message = response.choices[0].message.content
+    print(response_message)
+
+    new_questions = questions + "\n" + response_message
+    return wordVec(new_questions, holdValue)
+
+
 @app.route("/getFileList", methods=["GET"])
 def getFileList():
     collection_name = "fileList"
@@ -385,16 +480,23 @@ def QandA():
     # 选择检索方法
     if searchWay == 0:
         (outKnowledge, most_similar_data) = keyWord(questions, searchWeight)
-    if searchWay == 1:
+    elif searchWay == 1:
         (outKnowledge, most_similar_data) = wordVec(questions, searchWeight)
+    elif searchWay == 2:
+        (outKnowledge, most_similar_data) = euDistance(questions, searchWeight)
+    elif searchWay == 3:
+        (outKnowledge, most_similar_data) = reQuery(questions, searchWeight)
+    elif searchWay == 4:
+        (outKnowledge, most_similar_data) = subAnswer(questions, searchWeight)
 
     messages = []
+    # 问答的参数
     client = ZhipuAI(
         api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
     )  # 填写您自己的APIKey
 
     prompts = (
-        "你是一名烟草公司的数据管理人员，需要对用户的问题精准得回答，下面是你的资料：\n"
+        "你是一名烟草公司的数据管理人员，需要对用户的问题精准的回答，下面是你的资料：\n"
         + outKnowledge
     )
 

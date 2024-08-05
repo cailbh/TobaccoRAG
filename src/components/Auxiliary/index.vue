@@ -84,6 +84,7 @@ export default {
           text: text,
         },
       }).then((res) => {
+        console.log(res)
         let blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
         if (window.createObjectURL != undefined) {
           // basic

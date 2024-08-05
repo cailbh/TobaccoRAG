@@ -11,10 +11,9 @@
 
             <div class="block">
                 <span class="title">设置检索强度</span>
-                <el-slider v-model="weight" show-input :min="1" :max="10" :step="0.1" v-if="checkedSearch == '相似度度量'">
+                <el-slider v-model="weight" show-input :min="1" :max="10" :step="1" v-if="checkedSearch == '关键词匹配'">
                 </el-slider>
-                <el-slider v-model="weight" show-input :min="1" :max="10" :step="1"
-                    v-else-if="checkedSearch == '关键词匹配'">
+                <el-slider v-model="weight" show-input :min="1" :max="10" :step="0.1" v-else>
                 </el-slider>
             </div>
 
@@ -34,8 +33,8 @@ export default {
             searchList: ["关键词匹配", "相似度度量", "欧氏距离度量", "大模型优化提问", "预回答检索"],
             checkedSearch: "相似度度量",
             preChecked: "相似度度量",
-            weight: 1,
-            preWeight: 1
+            weight: 3,
+            preWeight: 3
         };
     },
     methods: {
@@ -59,7 +58,7 @@ export default {
     watch: {
         checkedSearch: {
             handler(newval, oldval) {
-                this.weight = 1
+                this.weight = 3
             },
             deep: true,
             immediate: true

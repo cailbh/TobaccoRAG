@@ -126,6 +126,7 @@ export default {
       this.$http
         .get("/api/getFileList", { params: {} }, {})
         .then((response) => {
+          console.log(response)
           _this.fileData = response.body;
           // }
         });

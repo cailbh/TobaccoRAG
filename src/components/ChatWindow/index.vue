@@ -83,7 +83,7 @@ export default {
                         }
                     })
                     .then((res) => {
-                        console.log(res.body)
+                        console.log(res)
                         let data = res.body;
                         let ans = data['answers'];
                         let quote = data['quote'];
