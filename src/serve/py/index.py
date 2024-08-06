@@ -21,7 +21,7 @@ import numpy as np
 import ast
 from bson import ObjectId, json_util
 
-file_path = "./data/杭烟营销中心各类标准文件/"
+file_path = "D:\Work\YanCao\TobaccoRAG\data\杭烟营销中心各类标准文件/"
 
 
 def convert_word_to_pdf(input_path, output_path):
@@ -330,7 +330,8 @@ def QandA():
 
     searchWay = request.json.get("searchWay")
     searchWeight = request.json.get("searchWeight")
-
+    outKnowledge = ''
+    most_similar_data = ''
     # 选择检索方法
     if searchWay == 1:
         (outKnowledge, most_similar_data) = wordVec(questions, searchWeight)
@@ -341,7 +342,7 @@ def QandA():
     )  # 填写您自己的APIKey
 
     prompts = (
-        "你是一名烟草公司的数据管理人员，需要对用户的问题精准得回答，下面是你的资料：\n"
+        "你是一名烟草公司的数据管理人员，需要对用户的问题根据资料精准得回答，如果资料中得不出结论，就不要回答，下面是相关的资料：\n"
         + outKnowledge
     )
 

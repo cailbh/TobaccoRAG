@@ -89,14 +89,14 @@
             <!-- </el-slider> -->
           </div>
           <!-- </div> -->
-          <el-button v-show="gsShow" class="buts" size="small" type="primary" @click="textChunkClk"
+          <el-button class="buts" size="small" type="primary" @click="textChunkClk"
             icon="el-icon-s-opportunity">开始分割</el-button>
 
-          <el-button v-show="gsShow" class="buts" size="small" type="primary" @click="confirmClk" icon="el-icon-upload">确认导入</el-button>
-          <el-button v-show="dgShow" class="buts" size="small" type="primary" @click="textChunkClk"
+          <el-button class="buts" size="small" type="primary" @click="confirmClk" icon="el-icon-upload">确认导入</el-button>
+          <!-- <el-button v-show="dgShow" class="buts" size="small" type="primary" @click="textChunkClk"
             icon="el-icon-s-opportunity">开始分割</el-button>
 
-          <el-button v-show="dgShow" class="buts" size="small" type="primary" @click="confirmClk" icon="el-icon-upload">确认导入</el-button>
+          <el-button v-show="dgShow" class="buts" size="small" type="primary" @click="confirmClk" icon="el-icon-upload">确认导入</el-button> -->
 
         </el-card>
       </div>
