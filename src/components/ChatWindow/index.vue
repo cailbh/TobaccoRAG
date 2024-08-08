@@ -31,7 +31,7 @@
                             <span><el-avatar icon="el-icon-user-solid"></el-avatar>GPT</span>
                             <el-button style="float: right; padding: 3px 0" type="text"></el-button>
                         </div> -->
-                        <div class="chatText">{{ message.text }}</div>
+                        <div class="chatText" v-html="message.text"></div>
                         <el-button v-for="(item, index) in message.quote" :key="index" type="text"
                             @click="quoteClk(item)">{{ (index + 1) }}</el-button>
                     </el-card>
@@ -53,6 +53,8 @@
 <script>
 import Auxiliary from '@/components/Auxiliary/index.vue';
 import searchControl from '@/components/searchControl/index.vue';
+// markdown库处理回复的聊天
+import { marked } from 'marked';
 
 export default {
     components: { Auxiliary, searchControl },
@@ -88,7 +90,9 @@ export default {
                         let ans = data['answers'];
                         let quote = data['quote'];
                         console.log("quote", quote);
-                        this.messages.push({ id: Date.now(), text: ans, isMe: false, quote: quote });
+                        let markedText = marked(ans)
+                        // console.log(markedText)
+                        this.messages.push({ id: Date.now(), text: markedText, isMe: false, quote: quote });
                     });
             }
         },
@@ -120,6 +124,7 @@ export default {
 .chatText {
     width: 100%;
     word-wrap: break-word;
+    /* white-space: pre-wrap; */
 }
 
 .isMeText {

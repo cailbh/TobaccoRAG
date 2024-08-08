@@ -96,7 +96,7 @@ def find_text_page_in_pdf(pdf_path, text):
         if lenSearchWord / lenWords >= 0.5:
             return page_num + 1  # 页码从 1 开始
 
-    # 没找到返回0
+    # 没找到返回1
     return 1
 
 

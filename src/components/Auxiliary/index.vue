@@ -5,10 +5,21 @@
       <el-button class="tagBut" type="danger" size="mini" icon="el-icon-close" circle @click="close"></el-button>
     </div>
     <div id="AuxiliaryPanelDiv" class="dataBody" ref="AuxiliaryPanelDiv">
-      <div class="pdfContainer" ref="bodypanel" style="overflow-y: auto;overflow-x: hidden;">
-        <div style="position: relative;width: 100%;height: 100%;">
+      <div class="pdfContainer" ref="bodypanel" style="overflow-y: auto;overflow-x: hidden; background-color: #fff;">
+        <div style="position: relative; width: 100%;">
+          <p style="position: relative; margin:10px auto; text-align: center; width: 100%;">{{ fileName }}</p>
+          <p
+            style="position: relative; margin: auto; text-align: left; width: 80%;text-wrap: wrap; white-space: pre-wrap;">
+            {{ originalText }}
+          </p>
+        </div>
+
+        <hr>
+
+        <div style="position: relative;width: 100%;">
           <canvas ref="renderContext"></canvas>
         </div>
+
       </div>
     </div>
     <div class="resizer" v-for="direction in ['right', 'bottom', 'left', 'bottom-right', 'bottom-left']"
@@ -30,6 +41,7 @@ export default {
     return {
       path: 'D:/Cailibuhong/XGD/fileData',
       fileName: '',
+      originalText: "",
       pdfPagesNum: 0,
       currentpage: 2,
       pdfUrl: '',
@@ -246,7 +258,9 @@ export default {
     const _this = this;
     let path = this.path;
     this.$bus.$on('quote', (val) => {
-      _this.fileName = val;
+      console.log(val)
+      _this.fileName = val.fileName;
+      _this.originalText = val.sentence;
       _this.goPreview(val.fileName, val.sentence)
       _this.AuxiliaryShow = true;
     });
