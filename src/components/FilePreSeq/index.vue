@@ -113,6 +113,8 @@
 
               <el-button class="chunkButs" size="small" type="primary" plain
                 @click="editText(item.index)">编辑</el-button>
+              <el-button class="chunkButs" size="small" type="primary" plain
+                @click="chunkText(item.index)">分割</el-button>
 
               <el-button class="chunkButs" size="small" type="primary" plain @click="addText(item.index)">新增</el-button>
               <template v-if="mergeHoverIndex != item.index">
@@ -238,6 +240,34 @@ export default {
       this.$nextTick(() => {
         this.$refs.input[0].focus();
       });
+    },
+    chunkText(index) {
+      console.log("cccc",this.textData[index])
+      const _this = this;
+      this.$http
+        .post("/api/chunkWordToSeq", { textData: _this.textData[index]['sentence'], overlap: _this.overlap, chunkSize: _this.chunkSize}, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then((res) => {
+          let seqData = res.body
+          
+          _this.textData.splice(index, 1, ...seqData);
+          _this.updataChunk(_this.textData);
+          // _this.$message({
+          //   message: '文本分割完成',
+          //   type: 'success'
+          // });
+          _this.$notify({
+            title: '文本分割完成',
+            type: 'success',
+            message: '文本分割完成,请确认后添加至知识库'
+          });
+        });
+      // this.textData.splice(index, 0, { 'sentence': '' });
+      // this.updataChunk(this.textData);
+      this.contextMenu.visible = false;
     },
     updataChunk(data) {
       this.textData = this.processTexts(data);

@@ -199,6 +199,18 @@ def word2seq():
         sentences = getSeq.split_documentByOriChunk(word)
     return jsonify(sentences)
 
+@app.route("/chunkWordToSeq", methods=["POST"])
+def chunkWordToSeq():
+    print()
+    textData = request.json.get("textData")
+    overlap = request.json.get("overlap")
+    chunkSize = request.json.get("chunkSize")
+    
+    sentence = []
+    print(textData,111)
+    sentences = getSeq.RCSplit(textData, chunkSize, overlap)
+    return jsonify(sentences)
+
 
 @app.route("/seqToVec", methods=["POST"])
 def seq2vec():

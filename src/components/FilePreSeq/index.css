@@ -198,7 +198,9 @@
 }
 .chunkButs{
   float: right;
-  margin: 0px 10px;
+  
+  /* margin-left 3px */
+  margin: 0px 3px !important;
 }
 .chunkButs1{
   float: right;
