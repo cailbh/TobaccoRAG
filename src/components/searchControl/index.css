@@ -7,10 +7,17 @@
     margin-top: 30px;
 }
 
-.block .title {
+.title {
     line-height: 24px;
     font-size: 18px;
     color: #303133;
+}
+
+.title2 {
+    line-height: 24px;
+    font-size: 15px;
+    color: #303133;
+    margin: 10px auto;
 }
 
 .dialog-footer {

@@ -21,6 +21,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import ast
 from bson import ObjectId, json_util
+import reranker as rerank
 
 file_path = "./data/杭烟营销中心各类标准文件/"
 
@@ -217,70 +218,65 @@ def seq2vec():
     return jsonify(["success"])
 
 
-def find_most_similar_vectors(vector_array, target_vector, top_n=5):
-    """
-    在向量数组中查找与目标向量最相似的前几个向量
+# def find_most_similar_vectors(vector_array, target_vector, top_n=5):
+#     """
+#     在向量数组中查找与目标向量最相似的前几个向量
 
-    :param vector_array: np.ndarray, 向量数组，形状为 (num_vectors, vector_dim)
-    :param target_vector: np.ndarray, 目标向量，形状为 (vector_dim,)
-    :param top_n: int, 要查找的最相似向量的数量
-    :return: list, 最相似向量的索引及其相似度
-    """
-    # 计算目标向量与向量数组中每个向量的余弦相似度
-    similarities = cosine_similarity(
-        vector_array, target_vector.reshape(1, -1)
-    ).flatten()
+#     :param vector_array: np.ndarray, 向量数组，形状为 (num_vectors, vector_dim)
+#     :param target_vector: np.ndarray, 目标向量，形状为 (vector_dim,)
+#     :param top_n: int, 要查找的最相似向量的数量
+#     :return: list, 最相似向量的索引及其相似度
+#     """
+#     # 计算目标向量与向量数组中每个向量的余弦相似度
+#     similarities = cosine_similarity(
+#         vector_array, target_vector.reshape(1, -1)
+#     ).flatten()
 
-    # 获取最相似的前 top_n 个向量的索引
-    most_similar_indices = similarities.argsort()[-top_n:][::-1]
+#     # 获取最相似的前 top_n 个向量的索引
+#     most_similar_indices = similarities.argsort()[-top_n:][::-1]
 
-    # 返回最相似向量的索引及其相似度
-    most_similar_vectors = [
-        (index, similarities[index]) for index in most_similar_indices
-    ]
-    return most_similar_vectors
-
-
-def find_similar_vectors(vector_array, target_vector, top_n, holdValue):
-    """
-    在向量数组中查找与目标向量最相似的前几个向量
-    找到前n个其中前n个向量的相似度相加大于等于holdValue
-
-    :param vector_array: np.ndarray, 向量数组，形状为 (num_vectors, vector_dim)
-    :param target_vector: np.ndarray, 目标向量，形状为 (vector_dim,)
-    :param top_n: int, 要查找的最相似向量的数量
-    :return: list, 最相似向量的索引及其相似度
-    """
-    # 计算目标向量与向量数组中每个向量的余弦相似度
-    similarities = cosine_similarity(
-        vector_array, target_vector.reshape(1, -1)
-    ).flatten()
-
-    # 排序
-    sorted_indices = similarities.argsort()
-
-    # 阈值
-    nowValue = 0.0
-    nValue = 0
-
-    while nowValue <= holdValue and nValue < top_n:
-        nValue += 1
-        nowValue += similarities[sorted_indices[-nValue]]
-
-    # 获取最相似的前 top_n 个向量的索引
-    most_similar_indices = sorted_indices[-nValue:][::-1]
-
-    # 返回最相似向量的索引及其相似度
-    most_similar_vectors = [
-        (index, similarities[index]) for index in most_similar_indices
-    ]
-    print("most_similar_vectors:", most_similar_vectors)
-    return most_similar_vectors
+#     # 返回最相似向量的索引及其相似度
+#     most_similar_vectors = [
+#         (index, similarities[index]) for index in most_similar_indices
+#     ]
+#     return most_similar_vectors
 
 
-"""
-检索方法函数
-"""
+# def find_similar_vectors(vector_array, target_vector, top_n, holdValue):
+#     """
+#     在向量数组中查找与目标向量最相似的前几个向量
+#     找到前n个其中前n个向量的相似度相加大于等于holdValue
+
+#     :param vector_array: np.ndarray, 向量数组，形状为 (num_vectors, vector_dim)
+#     :param target_vector: np.ndarray, 目标向量，形状为 (vector_dim,)
+#     :param top_n: int, 要查找的最相似向量的数量
+#     :return: list, 最相似向量的索引及其相似度
+#     """
+#     # 计算目标向量与向量数组中每个向量的余弦相似度
+#     similarities = cosine_similarity(
+#         vector_array, target_vector.reshape(1, -1)
+#     ).flatten()
+
+#     # 排序
+#     sorted_indices = similarities.argsort()
+
+#     # 阈值
+#     nowValue = 0.0
+#     nValue = 0
+
+#     while nowValue <= holdValue and nValue < top_n:
+#         nValue += 1
+#         nowValue += similarities[sorted_indices[-nValue]]
+
+#     # 获取最相似的前 top_n 个向量的索引
+#     most_similar_indices = sorted_indices[-nValue:][::-1]
+
+#     # 返回最相似向量的索引及其相似度
+#     most_similar_vectors = [
+#         (index, similarities[index]) for index in most_similar_indices
+#     ]
+#     print("most_similar_vectors:", most_similar_vectors)
+#     return most_similar_vectors
 
 
 def remove_special_characters(strings):
@@ -295,8 +291,67 @@ def remove_special_characters(strings):
     ]
 
 
+# 混合检索
+def RRF(order1, order2, order3):
+
+    # 获取数据
+    collection_name = "SeqVector"
+    allData = mg.fetch_vectors_from_db(collection_name)
+
+    Len = len(order1)
+    score = [0.0] * Len
+
+    # RRF算法直接重排
+    for i in range(0, Len):
+        score[order1[i]["order"]] += 1.0 / (i + 1)
+        score[order2[i]["order"]] += 1.0 / (i + 1)
+        score[order3[i]["order"]] += 1.0 / (i + 1)
+
+    sorted_rrf = np.array(score).argsort()[::-1]
+
+    print(score)
+
+    most_similar_data = []
+    for index in sorted_rrf:
+        vector_doc = allData[index]
+        vector_doc["_id"] = str(vector_doc["_id"])
+        vector_doc["order"] = int(index)
+        # vector_doc = mg.fetch_data_findone_db(collection_name,'index',int(index))
+        most_similar_data.append(vector_doc)
+
+    return most_similar_data
+
+
+# 重排
+def reOrder(questions):
+    # 获取数据
+    collection_name = "SeqVector"
+    allData = mg.fetch_vectors_from_db(collection_name)
+
+    q = []
+    for i in allData:
+        q.append([questions, i["sentence"]])
+    sorted_reScore = np.array(rerank.rerankerStore(q)).argsort()[::-1]
+
+    most_similar_data = []
+    for index in sorted_reScore:
+        vector_doc = allData[index]
+        vector_doc["_id"] = str(vector_doc["_id"])
+        vector_doc["order"] = int(index)
+        # vector_doc = mg.fetch_data_findone_db(collection_name,'index',int(index))
+        most_similar_data.append(vector_doc)
+
+    return most_similar_data
+
+
+"""
+
+检索方法函数
+"""
+
+
 # 关键词检索
-def keyWord(questions, holdValue):
+def keyWord(questions):
     # 先把questions分割成几个关键词
     questionsList = remove_special_characters(jieba.lcut_for_search(questions))
     print("分词结果", questionsList)
@@ -314,26 +369,21 @@ def keyWord(questions, holdValue):
                 weight[i] += 1
 
     # 排序
-    sortedWeight = np.array(weight).argsort()
-    most_similar_indices = sortedWeight[-holdValue:][::-1]
-    print(most_similar_indices)
-    most_similar_sentences = [(index, allData[index]) for index in most_similar_indices]
-    # print(most_similar_sentences)
+    sorted_word = np.array(weight).argsort()[::-1]
+
     most_similar_data = []
-    for index, sentence in most_similar_sentences:
+    for index in sorted_word:
         vector_doc = allData[index]
         vector_doc["_id"] = str(vector_doc["_id"])
+        vector_doc["order"] = int(index)
         # vector_doc = mg.fetch_data_findone_db(collection_name,'index',int(index))
         most_similar_data.append(vector_doc)
 
-    outKnowledge = ""
-    for da in most_similar_data:
-        outKnowledge += da["sentence"]
-    return (outKnowledge, most_similar_data)
+    return most_similar_data
 
 
-# 相似度检索
-def wordVec(questions, holdValue):
+# 余弦相似度检索
+def wordVec(questions):
     queVec = sentence2Vec.embedding_generate(questions)
 
     collection_name = "SeqVector"
@@ -342,25 +392,29 @@ def wordVec(questions, holdValue):
     # # 将向量数据转换为 numpy 数组
     vector_array = np.array(vector_data)
     target_vector = np.array(queVec)
-    # most_similar = find_most_similar_vectors(vector_array, target_vector, top_n=3)
-    top_n = 5
-    most_similar = find_similar_vectors(vector_array, target_vector, top_n, holdValue)
+
+    # 计算目标向量与向量数组中每个向量的余弦相似度
+    similarities = cosine_similarity(
+        vector_array, target_vector.reshape(1, -1)
+    ).flatten()
+
+    # 排序
+    sorted_indices = similarities.argsort()[::-1]
+    # most_similar = [(index, similarities[index]) for index in sorted_indices]
 
     most_similar_data = []
-    for index, similarity in most_similar:
+    for index in sorted_indices:
         vector_doc = allData[index]
         vector_doc["_id"] = str(vector_doc["_id"])
+        vector_doc["order"] = int(index)
         # vector_doc = mg.fetch_data_findone_db(collection_name,'index',int(index))
         most_similar_data.append(vector_doc)
 
-    outKnowledge = ""
-    for da in most_similar_data:
-        outKnowledge += da["sentence"]
-    return (outKnowledge, most_similar_data)
+    return most_similar_data
 
 
 # 欧氏距离
-def euDistance(questions, holdValue):
+def euDistance(questions):
     queVec = sentence2Vec.embedding_generate(questions)
 
     collection_name = "SeqVector"
@@ -375,42 +429,24 @@ def euDistance(questions, holdValue):
         # 使用 NumPy 的 linalg 模块计算欧氏距离
         euclidean_distance.append(np.linalg.norm(vec - target_vector.reshape(1, -1)))
 
-    print(euclidean_distance)
+    # print(euclidean_distance)
 
     # 排序
     sorted_euclidean_distance = np.array(euclidean_distance).argsort()
 
-    # 阈值
-    nowValue = 0.0
-    nValue = 0
-
-    while nowValue <= holdValue:
-        nowValue += euclidean_distance[sorted_euclidean_distance[nValue]]
-        nValue += 1
-
-    # 获取最相似的前 top_n 个向量的索引
-    most_similar_indices = sorted_euclidean_distance[:nValue]
-
-    # 返回最相似向量的索引及其相似度
-    most_similar_distance = [
-        (index, euclidean_distance[index]) for index in most_similar_indices
-    ]
-    print("most_similar_distance:", most_similar_distance)
-
     most_similar_data = []
-    for index, similarity in most_similar_distance:
+    for index in sorted_euclidean_distance:
         vector_doc = allData[index]
         vector_doc["_id"] = str(vector_doc["_id"])
+        vector_doc["order"] = int(index)
         # vector_doc = mg.fetch_data_findone_db(collection_name,'index',int(index))
         most_similar_data.append(vector_doc)
 
-    outKnowledge = ""
-    for da in most_similar_data:
-        outKnowledge += da["sentence"]
-    return (outKnowledge, most_similar_data)
+    return most_similar_data
 
 
-def reQuery(questions, holdValue):
+# 优化回答
+def reQuery(questions):
     client = ZhipuAI(
         api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
     )  # 填写您自己的APIKey
@@ -428,11 +464,11 @@ def reQuery(questions, holdValue):
     response_message = response.choices[0].message.content
     print(response_message)
 
-    new_questions = questions + "\n" + response_message
-    return wordVec(new_questions, holdValue)
+    return questions + "\n" + response_message
 
 
-def subAnswer(questions, holdValue):
+# 预回答
+def preAnswer(questions):
     client = ZhipuAI(
         api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
     )  # 填写您自己的APIKey
@@ -450,8 +486,7 @@ def subAnswer(questions, holdValue):
     response_message = response.choices[0].message.content
     print(response_message)
 
-    new_questions = questions + "\n" + response_message
-    return wordVec(new_questions, holdValue)
+    return questions + "\n" + response_message
 
 
 @app.route("/getFileList", methods=["GET"])
@@ -474,20 +509,57 @@ def QandA():
     questions = request.json.get("questions")
     print(questions)
 
+    # 检索参考值 0为关键词;1为余弦相似度;2为欧氏距离
     searchWay = request.json.get("searchWay")
+    # 检索强度
     searchWeight = request.json.get("searchWeight")
+    # 是否优化提问
+    reAsk = request.json.get("reAsk")
+    print(reAsk)
+    # 是否预回答优化
+    preAns = request.json.get("preAns")
+    # 是否使用混合检索
+    isRRF = request.json.get("isRRF")
+    # 是否重排
+    isReOrder = request.json.get("isReOrder")
 
+    if reAsk == True:
+        print("重提问")
+        questions = reQuery(questions)
+
+    if preAns == True:
+        print("预回答")
+        questions = preAnswer(questions)
+
+    print(questions)
+
+    outKnowledge = ""
+    quoteList = []
     # 选择检索方法
-    if searchWay == 0:
-        (outKnowledge, most_similar_data) = keyWord(questions, searchWeight)
+
+    if isReOrder:
+        print("重排")
+        most_similar_data = reOrder(questions)
+    elif isRRF:
+        print("混合检索")
+        # 混合检索
+        most_similar_data = RRF(
+            keyWord(questions), wordVec(questions), euDistance(questions)
+        )
+
+    elif searchWay == 0:
+        print("关键词检索")
+        most_similar_data = keyWord(questions)
     elif searchWay == 1:
-        (outKnowledge, most_similar_data) = wordVec(questions, searchWeight)
+        print("余弦相似度检索")
+        most_similar_data = wordVec(questions)
     elif searchWay == 2:
-        (outKnowledge, most_similar_data) = euDistance(questions, searchWeight)
-    elif searchWay == 3:
-        (outKnowledge, most_similar_data) = reQuery(questions, searchWeight)
-    elif searchWay == 4:
-        (outKnowledge, most_similar_data) = subAnswer(questions, searchWeight)
+        print("欧氏距离检索")
+        most_similar_data = euDistance(questions)
+
+    quoteList = most_similar_data[:searchWeight]
+    for q in quoteList:
+        outKnowledge += q["sentence"]
 
     messages = []
     # 问答的参数
@@ -502,8 +574,8 @@ def QandA():
 
     user_input = prompts + "下面是用户的问题，请回答：" + questions
     print(user_input)
-    answers = "11"
-    print(type(most_similar_data))
+    answers = ""
+    # print(quoteList)
     # -----------------------------------------------------------
     messages += [{"role": "user", "content": user_input}]
     response = client.chat.completions.create(
@@ -512,7 +584,7 @@ def QandA():
     response_message = response.choices[0].message.content
     answers = str(response_message)
     # -----------------------------------------------------------
-    return jsonify({"answers": answers, "quote": list(most_similar_data)})
+    return jsonify({"answers": answers, "quote": list(quoteList)})
 
 
 if __name__ == "__main__":

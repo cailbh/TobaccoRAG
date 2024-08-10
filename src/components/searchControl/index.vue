@@ -1,19 +1,50 @@
 <!--  -->
 <template>
     <div class="searchControl" style="width: 120px;">
+        <!-- 打开按钮 -->
         <el-button type="text" @click="dialog = true">设置文件检索策略</el-button>
 
+        <!-- 窗口主体 -->
         <el-dialog title="设置文件检索策略" :visible.sync="dialog" :append-to-body="true" :modal-append-to-body="false"
-            @close="cancelChange">
-            <el-radio-group v-model="checkedSearch">
-                <el-radio v-for="(search, index) in searchList" :label="search">{{ search }}</el-radio>
-            </el-radio-group>
+            @close="cancelChange" style="">
+
+            <div style="display: flex; position: relative; width: 100%;height: 150px;justify-content: space-around;">
+                <div style="width: 40%;height: 100%; position: relative;">
+                    <div class="title" style="height: 16%;">
+                        检索参考值
+                    </div>
+
+                    <el-radio-group v-model="controlList[0].checked">
+                        <div class="title2">&nbsp;&nbsp;关键词</div>
+                        <el-radio :label="controlList[0].content[0]">{{ controlList[0].content[0] }}</el-radio>
+                        <div class="title2">&nbsp;&nbsp;相似度</div>
+                        <el-radio :label="controlList[0].content[1]">{{ controlList[0].content[1] }}</el-radio>
+                        <el-radio :label="controlList[0].content[2]">{{ controlList[0].content[2] }}</el-radio>
+                    </el-radio-group>
+                </div>
+                <div style="width: 45%;height: 100%; position: relative;">
+                    <div class="title" style="height: 16%;">优化方法</div>
+                    <div style="width: 100%;height: 42%; position: relative;">
+                        <div class="title2">&nbsp;&nbsp;问答优化</div>
+                        <el-checkbox-group v-model="controlList[1].checked">
+                            <el-checkbox :label="controlList[1].content[0]"></el-checkbox>
+                            <el-checkbox :label="controlList[1].content[1]"></el-checkbox>
+                        </el-checkbox-group>
+                    </div>
+                    <div style="width: 100%;height: 42%; position: relative;">
+                        <div class="title2">&nbsp;&nbsp;排列优化</div>
+                        <el-checkbox-group v-model="controlList[2].checked">
+                            <el-checkbox :label="controlList[2].content[0]"></el-checkbox>
+                            <el-checkbox :label="controlList[2].content[1]"></el-checkbox>
+                        </el-checkbox-group>
+                    </div>
+                </div>
+            </div>
+
 
             <div class="block">
-                <span class="title">设置检索强度</span>
-                <el-slider v-model="weight" show-input :min="1" :max="10" :step="1" v-if="checkedSearch == '关键词匹配'">
-                </el-slider>
-                <el-slider v-model="weight" show-input :min="1" :max="10" :step="0.1" v-else>
+                <span class="title">设置检索个数</span>
+                <el-slider v-model="weight" show-input :min="1" :max="10" :step="1">
                 </el-slider>
             </div>
 
@@ -30,9 +61,23 @@ export default {
     data() {
         return {
             dialog: false,
-            searchList: ["关键词匹配", "相似度度量", "欧氏距离度量", "大模型优化提问", "预回答检索"],
-            checkedSearch: "相似度度量",
-            preChecked: "相似度度量",
+            controlList: [
+                {
+                    content: ["关键词匹配", "余弦相似度度量", "欧氏距离度量"],
+                    checked: "余弦相似度度量",
+                    preChecked: "余弦相似度度量",
+                },
+                {
+                    content: ["混合检索", "是否重排"],
+                    checked: [],
+                    preChecked: [],
+                },
+                {
+                    content: ["优化提问", "预回答"],
+                    checked: [],
+                    preChecked: [],
+                }
+            ],
             weight: 3,
             preWeight: 3
         };
@@ -40,29 +85,37 @@ export default {
     methods: {
         cancelChange() {
             // 关闭表单
-            this.checkedSearch = this.preChecked;
+            this.controlList.map(d => {
+                d.checked = d.preChecked
+            })
             this.weight = this.preWeight
 
             this.dialog = false;
         },
         outputChange() {
-            this.preChecked = this.checkedSearch;
+            this.controlList.map(d => {
+                d.preChecked = d.checked
+            })
             this.preWeight = this.weight
 
             //发送到父元素
-            this.$emit("searchChange", this.checkedSearch, this.weight)
+            this.$emit("searchChange", this.controlList, this.weight)
 
             this.dialog = false;
         },
     },
     watch: {
-        checkedSearch: {
+        controlList: {
             handler(newval, oldval) {
                 this.weight = 3
             },
             deep: true,
             immediate: true
         }
+    },
+    mounted() {
+        // 初始化
+        this.outputChange()
     }
 }
 </script>

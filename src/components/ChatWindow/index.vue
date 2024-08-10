@@ -53,8 +53,10 @@
 <script>
 import Auxiliary from '@/components/Auxiliary/index.vue';
 import searchControl from '@/components/searchControl/index.vue';
+import { tree } from 'd3';
 // markdown库处理回复的聊天
 import { marked } from 'marked';
+import { f } from 'pdfjs-dist/legacy/build/pdf.worker';
 
 export default {
     components: { Auxiliary, searchControl },
@@ -65,7 +67,11 @@ export default {
                 { id: 1, text: '你好,我有什么可以帮助你的吗？', isMe: false, quote: [] },
             ],
             searchWay: 1,
-            searchWeight: 1
+            reAsk: false,
+            preAns: false,
+            isRRF: false,
+            isReOrder: false,
+            searchWeight: 3
         };
     },
     methods: {
@@ -79,7 +85,15 @@ export default {
                 this.messages.push({ id: Date.now(), text: this.inputText, isMe: true });
                 this.inputText = '';
                 this.$http
-                    .post("/api/QA", { questions: questions, searchWay: this.searchWay, searchWeight: this.searchWeight }, {
+                    .post("/api/QA", {
+                        questions: questions,
+                        reAsk: this.reAsk,
+                        preAns: this.preAns,
+                        isRRF: this.isRRF,
+                        isReOrder: this.isReOrder,
+                        searchWay: this.searchWay,
+                        searchWeight: this.searchWeight
+                    }, {
                         headers: {
                             'Content-Type': 'application/json'
                         }
@@ -97,12 +111,55 @@ export default {
             }
         },
         searchChange(val, weight) {
-            let list = ["关键词匹配", "相似度度量", "欧氏距离度量", "大模型优化提问", "预回答检索"]
+            // console.log(val)
 
-            this.searchWay = list.findIndex(i => i == val)
+            let wayList = ["关键词匹配", "余弦相似度度量", "欧氏距离度量"]
+            this.searchWay = wayList.findIndex(i => i == val[0].checked)
+
+            if (val[1].checked.length == 0) {
+                this.isReOrder = false
+                this.isRRF = false
+            }
+            else if (val[1].checked.length == 2) {
+                this.isRRF = true
+                this.isReOrder = true
+            }
+            else {
+                if (val[1].checked[0] == "混合检索") {
+                    this.isRRF = true
+                    this.isReOrder = false
+                }
+                else {
+                    this.isReOrder = true
+                    this.isRRF = false
+                }
+            }
+
+
+            if (val[2].checked.length == 0) {
+                this.reAsk = false
+                this.preAns = false
+            }
+            else if (val[2].checked.length == 2) {
+                this.reAsk = true
+                this.preAns = true
+            }
+            else {
+                if (val[2].checked[0] == "优化提问") {
+                    this.reAsk = true
+                    this.preAns = false
+                }
+                else {
+                    this.reAsk = false
+                    this.preAns = true
+                }
+            }
+
             this.searchWeight = weight
 
-            console.log(this.searchWay, this.searchWeight)
+            console.log(this.isRRF, this.isReOrder)
+            // console.log(this.reAsk, this.preAns)
+            // console.log(this.searchWay, this.searchWeight)
         }
     },
 };
