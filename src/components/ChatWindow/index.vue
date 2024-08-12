@@ -31,7 +31,7 @@
                             <span><el-avatar icon="el-icon-user-solid"></el-avatar>GPT</span>
                             <el-button style="float: right; padding: 3px 0" type="text"></el-button>
                         </div> -->
-                        <div class="chatText">{{ message.text }}</div>
+                        <div class="chatText" v-html="message.text"></div>
                         <el-button v-for="(item, index) in message.quote" :key="index" type="text"
                             @click="quoteClk(item)">{{ (index + 1) }}</el-button>
                     </el-card>
@@ -53,6 +53,10 @@
 <script>
 import Auxiliary from '@/components/Auxiliary/index.vue';
 import searchControl from '@/components/searchControl/index.vue';
+import { tree } from 'd3';
+// markdown库处理回复的聊天
+import { marked } from 'marked';
+import { f } from 'pdfjs-dist/legacy/build/pdf.worker';
 
 export default {
     components: { Auxiliary, searchControl },
@@ -63,12 +67,58 @@ export default {
                 { id: 1, text: '你好,我有什么可以帮助你的吗？', isMe: false, quote: [] },
             ],
             searchWay: 1,
-            searchWeight: 1
+            reAsk: false,
+            preAns: false,
+            isRRF: false,
+            isReOrder: false,
+            searchWeight: 3
         };
+    }, 
+     watch: {
+        messages(val) {
+            this.saveHistory()
+        },
+    },
+    created() {
+        const _this = this;
+        this.getHistory()
+        this.$nextTick(() => {
+        });
     },
     methods: {
         quoteClk(val) {
             this.$bus.$emit("quote", val);
+        },
+        getHistory(){
+            const _this = this;
+            this.$http
+                .get("/api/getHistory", { params: {} }, {})
+                .then((response) => {
+                    console.log("getHistory",response)
+                    _this.messages = response.body
+                    // }
+                });
+        },
+        saveHistory(){
+            const _this = this;
+            this.$http
+                .post("/api/saveHistory", { history: _this.messages,}, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then((res) => {
+                    // _this.$message({
+                    //   message: '成功建立向量数据库',
+                    //   type: 'success'
+                    // });
+
+                    // _this.$notify({
+                    //     title: '保存成功',
+                    //     type: 'success',
+                    //     message: '当前数据已添加至知识库'
+                    // });
+                });
         },
         submit() {
             const _this = this;
@@ -77,28 +127,81 @@ export default {
                 this.messages.push({ id: Date.now(), text: this.inputText, isMe: true });
                 this.inputText = '';
                 this.$http
-                    .post("/api/QA", { questions: questions, searchWay: this.searchWay, searchWeight: this.searchWeight }, {
+                    .post("/api/QA", {
+                        questions: questions,
+                        reAsk: this.reAsk,
+                        preAns: this.preAns,
+                        isRRF: this.isRRF,
+                        isReOrder: this.isReOrder,
+                        searchWay: this.searchWay,
+                        searchWeight: this.searchWeight
+                    }, {
                         headers: {
                             'Content-Type': 'application/json'
                         }
                     })
                     .then((res) => {
-                        console.log(res.body)
+                        console.log(res)
                         let data = res.body;
                         let ans = data['answers'];
                         let quote = data['quote'];
                         console.log("quote", quote);
-                        this.messages.push({ id: Date.now(), text: ans, isMe: false, quote: quote });
+                        let markedText = marked(ans)
+                        // console.log(markedText)
+                        this.messages.push({ id: Date.now(), text: markedText, isMe: false, quote: quote });
                     });
             }
         },
         searchChange(val, weight) {
-            let list = ["关键词匹配", "相似度度量", "欧氏距离度量", "大模型优化提问", "预回答检索"]
+            // console.log(val)
 
-            this.searchWay = list.findIndex(i => i == val)
+            let wayList = ["关键词匹配", "余弦相似度度量", "欧氏距离度量"]
+            this.searchWay = wayList.findIndex(i => i == val[0].checked)
+
+            if (val[1].checked.length == 0) {
+                this.isReOrder = false
+                this.isRRF = false
+            }
+            else if (val[1].checked.length == 2) {
+                this.isRRF = true
+                this.isReOrder = true
+            }
+            else {
+                if (val[1].checked[0] == "混合检索") {
+                    this.isRRF = true
+                    this.isReOrder = false
+                }
+                else {
+                    this.isReOrder = true
+                    this.isRRF = false
+                }
+            }
+
+
+            if (val[2].checked.length == 0) {
+                this.reAsk = false
+                this.preAns = false
+            }
+            else if (val[2].checked.length == 2) {
+                this.reAsk = true
+                this.preAns = true
+            }
+            else {
+                if (val[2].checked[0] == "优化提问") {
+                    this.reAsk = true
+                    this.preAns = false
+                }
+                else {
+                    this.reAsk = false
+                    this.preAns = true
+                }
+            }
+
             this.searchWeight = weight
 
-            console.log(this.searchWay, this.searchWeight)
+            console.log(this.isRRF, this.isReOrder)
+            // console.log(this.reAsk, this.preAns)
+            // console.log(this.searchWay, this.searchWeight)
         }
     },
 };

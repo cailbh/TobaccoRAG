@@ -19,6 +19,7 @@
     "element-ui": "^2.15.14",
     "js2wordcloud": "^1.1.12",
     "mammoth": "^1.8.0",
+    "marked": "^14.0.0",
     "mongoose": "^8.4.1",
     "neo4j-driver": "^5.21.0",
     "node-gyp": "^10.1.0",

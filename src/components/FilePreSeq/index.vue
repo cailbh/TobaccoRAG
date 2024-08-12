@@ -14,14 +14,18 @@
     </div>
     <div id="FilePreSeqBody">
       <div class="filePre">
-        <el-card class="filePre-card ">
+        
+        <div class="docWrap">
+            <div ref="prePanel"></div>
+          </div>
+        <el-card class="filePre-card filePreC">
           <div slot="header" class="clearfix">
             <span class="h1Txt">文件预览</span>
             <span>&nbsp;</span>
             <span class="h2Txt">{{ curFileName }}</span>
           </div>
-          <div class="pdfContainer" ref="bodypanel" style="overflow-y: auto;overflow-x: hidden;">
-            <div class="canvasContainer" style="position: relative;width: 100%;height: 100%;">
+          <!-- <div class="pdfContainer" ref="bodypanel" style="overflow-y: auto;overflow-x: hidden;">
+            <div class="canvasContainer"  ref="prePanel" style="position: relative;width: 100%;height: 100%;">
               <canvas ref="renderContext"></canvas>
             </div>
           </div>
@@ -32,7 +36,7 @@
                   @current-change="currentChange" />
               </el-col>
             </el-row>
-          </div>
+          </div> -->
         </el-card>
       </div>
       <div class="toolsDiv">
@@ -170,7 +174,7 @@ import axios from "axios";
 import * as PDFJS from "pdfjs-dist/legacy/build/pdf";  // 引入PDFJS 
 import pdfjsWorker from "pdfjs-dist/legacy/build/pdf.worker.entry.js"; // 引入workerSrc的地址
 PDFJS.GlobalWorkerOptions.workerSrc = pdfjsWorker; //设置PDFJS.GlobalWorkerOptions.workerSrc的地址
-
+const docx = require("docx-preview");
 export default {
   props: ["curFileName"],
   components: {},
@@ -457,18 +461,34 @@ export default {
           file: fileName,
         },
       }).then((res) => {
+        console.log(res)
         let blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-        if (window.createObjectURL != undefined) {
-          // basic
-          this.pdfUrl = window.createObjectURL(blob);
-        } else if (window.URL != undefined) {
-          // mozilla(firefox)
-          this.pdfUrl = window.URL.createObjectURL(blob);
-        } else if (window.webkitURL != undefined) {
-          // webkit or chrome
-          this.pdfUrl = window.webkitURL.createObjectURL(blob);
+        const option = {
+          className: "docx", // 默认和文档样式类的类名/前缀
+          inWrapper: true, // 启用围绕文档内容渲染包装器
+          ignoreWidth: false, // 禁止页面渲染宽度
+          ignoreHeight: false, // 禁止页面渲染高度
+          ignoreFonts: false, // 禁止字体渲染
+          breakPages: true, // 在分页符上启用分页
+          ignoreLastRenderedPageBreak: true, //禁用lastRenderedPageBreak元素的分页
+          experimental: false, //启用实验性功能（制表符停止计算）
+          trimXmlDeclaration: true, //如果为真，xml声明将在解析之前从xml文档中删除
+          debug: false, // 启用额外的日志记录
+        };
+        if(this.$refs.prePanel){
+          docx.renderAsync(blob, this.$refs.prePanel, null, option); // 渲染到页面
         }
-        this.getPdf(this.pdfUrl, 1);
+        // if (window.createObjectURL != undefined) {
+        //   // basic
+        //   this.pdfUrl = window.createObjectURL(blob);
+        // } else if (window.URL != undefined) {
+        //   // mozilla(firefox)
+        //   this.pdfUrl = window.URL.createObjectURL(blob);
+        // } else if (window.webkitURL != undefined) {
+        //   // webkit or chrome
+        //   this.pdfUrl = window.webkitURL.createObjectURL(blob);
+        // }
+        // this.getPdf(this.pdfUrl, 1);
         // docx.renderAsync(data, this.$refs.fileTest); // 渲染到页面
       });
       this.getSeqData(fileName);

@@ -40,6 +40,12 @@ def fetch_data_findone_db(collectionName,key,value):
         res = [doc for doc in data]
     return res
 
+def del_data_db(collectionName,key,value):
+     # 获取集合
+    collection = db[collectionName]
+    data = collection.delete_many({key: value})
+    return 
+
 def updata_data_findone_db(collectionName,key,value,news):
      # 获取集合
     collection = db[collectionName]
@@ -74,6 +80,14 @@ def insert_data(collection_name, data):
     collection = db[collection_name]
     # # 清空集合
     # collection.delete_many({})
+    # 插入数据
+    result = collection.insert_many(data)
+    return result.inserted_ids
+def insert_data_clear(collection_name, data):
+    # 获取集合
+    collection = db[collection_name]
+    # # 清空集合
+    collection.delete_many({})
     # 插入数据
     result = collection.insert_many(data)
     return result.inserted_ids

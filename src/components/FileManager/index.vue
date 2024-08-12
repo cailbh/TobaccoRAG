@@ -120,6 +120,19 @@ export default {
     },
     handleDelete(index, row) {
       console.log(index, row);
+      const _this = this;
+      this.$http
+        .post("/api/FileListDelOne", { fileName: row['fileName'] }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then((response) => {
+          console.log("FileListDelOne", response.body);
+          
+          _this.fileData = response.body;
+          // }
+        });
     },
     tableRowClassName({ row, rowIndex }) {
       if (row.isChoose) {
@@ -132,6 +145,7 @@ export default {
       this.$http
         .get("/api/getFileList", { params: {} }, {})
         .then((response) => {
+          console.log(response)
           _this.fileData = response.body;
           // }
         });

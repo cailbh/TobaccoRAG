@@ -17,8 +17,8 @@ def RCSplit(word,chunkSize,overlap):
 
 def split_documentByOriChunk(text):
     # 正则表达式匹配章节和条款
-    chapter_pattern = re.compile(r'(第[一二三四五六七八九十]+章)\s*(.*)')
-    article_pattern = re.compile(r'(第[一二三四五六七八九十]+条)\s*(.*)')
+    chapter_pattern = re.compile(r'(第[一二三四五六七八九十百]+章)\s*(.*)')
+    article_pattern = re.compile(r'(第[一二三四五六七八九十百]+条)\s*(.*)')
 
     # 初始化结果
     result = []

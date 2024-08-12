@@ -49,9 +49,3 @@
   background: white;
   float: left;
 }
-.docWrap {
-  width: 60%;
-  height: 100%;
-  float: right;
-  overflow-x: auto;
-}
