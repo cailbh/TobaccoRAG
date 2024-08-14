@@ -190,7 +190,7 @@ def file_upload():
 
 @app.route("/wordToSeq", methods=["POST"])
 def word2seq():
-    file = request.json.get("file")
+    file = request.json.get("file").split(".")[0]+".docx"
     overlap = request.json.get("overlap")
     chunkSize = request.json.get("chunkSize")
     SplitType = request.json.get("SplitType")

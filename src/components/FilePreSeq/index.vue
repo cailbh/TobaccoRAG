@@ -452,6 +452,7 @@ export default {
         });
     },
     fileChange(fileName) {
+      console.log('fileName',fileName)
       const _this = this;
       axios({
         method: "post",
@@ -558,7 +559,7 @@ export default {
   mounted() {
     const _this = this;
     if (this.curFileName != '') {
-      _this.fileChange(_this.curFileName + '.pdf')
+      _this.fileChange(_this.curFileName + '.docx')
     }
     this.$bus.$on('curFileName', (val) => {
       _this.curFileName = val;
