@@ -22,8 +22,10 @@ import numpy as np
 import ast
 from bson import ObjectId, json_util
 import reranker as rerank
+import requests
+import json
 
-file_path = "D:\Work\YanCao\TobaccoRAG\data\杭烟营销中心各类标准文件/"
+file_path = "D:\data\\"
 
 
 def convert_word_to_pdf(input_path, output_path):
@@ -38,6 +40,7 @@ def convert_word_to_pdf(input_path, output_path):
     try:
         # 打开Word文档
         doc = word_app.Documents.Open(input_path)
+        print(pdf_file)
         # 保存为PDF
         doc.SaveAs(pdf_file, FileFormat=17)
         doc.Close()
@@ -59,6 +62,14 @@ def convert_ofd_to_pdf(ofd_file, output_dir):
     with open(pdf_file, "wb") as f:
         f.write(pdf_bytes)
     return pdf_file
+
+
+def chatmodel(query):
+    url = "http://192.168.3.118:5000/ChatQA"
+    datas = {"questions": query}
+    datas = json.dumps(datas)
+    head = {"Content-Type": "application/json"}
+    return requests.post(url, data=datas, headers=head).json()["answers"]
 
 
 # def convert_file_to_pdf(input_file, output_dir):
@@ -131,7 +142,7 @@ def file_pre():
     file = request.args.get("file")
     text = request.args.get("text")
     outpath = file_path
-    pdf_path = f"{outpath}/{file}.pdf"
+    pdf_path = f"{outpath}{file}.pdf"
     pdf_blob = myTools.read_pdf_as_blob(pdf_path)
     response = Response(io.BytesIO(pdf_blob), mimetype="application/pdf")
     response.headers.set("Content-Disposition", "attachment", filename="sample.pdf")
@@ -141,6 +152,22 @@ def file_pre():
     pagerects = find_text_in_pdf(pdf_path, page, text)
     response.headers.set("PageRects", pagerects)
     return response
+
+
+@app.route("/filesave", methods=["POST"])
+def file_save():
+    if "file" not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "No selected file"}), 400
+
+    print(file)
+    # file_path = request.form.get('file_path')
+    if file:
+        filepath = os.path.join(file_path, file.filename)
+        file.save(filepath)
+    return "successful"
 
 
 @app.route("/fileUpload", methods=["POST"])
@@ -161,10 +188,16 @@ def file_upload():
         mg.insert_data(collection_name, [{"fileName": file_name_ori}])
     if os.path.exists(docx_path):
         docx_blob = myTools.read_pdf_as_blob(docx_path)
-        response = Response(io.BytesIO(docx_blob), mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-        response.headers.set("Content-Disposition", "attachment", filename="sample.docx")
+        response = Response(
+            io.BytesIO(docx_blob),
+            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        response.headers.set(
+            "Content-Disposition", "attachment", filename="sample.docx"
+        )
         return response
     if os.path.exists(pdf_path):
+        print("pdf exists")
         pdf_blob = myTools.read_pdf_as_blob(pdf_path)
         response = Response(io.BytesIO(pdf_blob), mimetype="application/pdf")
         response.headers.set("Content-Disposition", "attachment", filename="sample.pdf")
@@ -208,12 +241,13 @@ def word2seq():
         sentences = getSeq.split_documentByOriChunk(word)
     return jsonify(sentences)
 
+
 @app.route("/chunkWordToSeq", methods=["POST"])
 def chunkWordToSeq():
     textData = request.json.get("textData")
     overlap = request.json.get("overlap")
     chunkSize = request.json.get("chunkSize")
-    
+
     sentence = []
     sentences = getSeq.RCSplit(textData, chunkSize, overlap)
     return jsonify(sentences)
@@ -330,7 +364,6 @@ def RRF(order1, order2, order3):
         score[order3[i]["order"]] += 1.0 / (i + 1)
 
     sorted_rrf = np.array(score).argsort()[::-1]
-
 
     most_similar_data = []
     for index in sorted_rrf:
@@ -477,13 +510,14 @@ def reQuery(questions):
         "你是一名文件数据管理人员，需要对用户的问题重新表达\n下面是用户的问题，请对其进行重新表述："
         + questions
     )
-    messages += [{"role": "user", "content": user_input}]
+    # messages += [{"role": "user", "content": user_input}]
 
-    response = client.chat.completions.create(
-        model="glm-4", messages=messages  # 填写需要调用的模型名称
-    )
-    response_message = response.choices[0].message.content
-    print(response_message)
+    # response = client.chat.completions.create(
+    #     model="glm-4", messages=messages  # 填写需要调用的模型名称
+    # )
+    # response_message = response.choices[0].message.content
+    # print(response_message)
+    response_message = chatmodel(user_input)
 
     return questions + "\n" + response_message
 
@@ -499,13 +533,15 @@ def preAnswer(questions):
         "你是一名文件数据管理人员，需要对用户的问题精准的回答\n下面是用户的问题，请回答："
         + questions
     )
-    messages += [{"role": "user", "content": user_input}]
+    # messages += [{"role": "user", "content": user_input}]
 
-    response = client.chat.completions.create(
-        model="glm-4", messages=messages  # 填写需要调用的模型名称
-    )
-    response_message = response.choices[0].message.content
-    print(response_message)
+    # response = client.chat.completions.create(
+    #     model="glm-4", messages=messages  # 填写需要调用的模型名称
+    # )
+    # response_message = response.choices[0].message.content
+    # print(response_message)
+
+    response_message = chatmodel(user_input)
 
     return questions + "\n" + response_message
 
@@ -516,23 +552,26 @@ def getFileList():
     filiList = mg.fetch_alldata_db(collection_name)
     return jsonify(filiList)
 
+
 @app.route("/getHistory", methods=["GET"])
 def getHistory():
-    print('getHistory')
+    print("getHistory")
     collection_name = "QAHistory"
     filiList = mg.fetch_alldata_db(collection_name)
     return jsonify(filiList)
 
+
 @app.route("/saveHistory", methods=["POST"])
 def saveHistory():
-    print('saveHistory')
+    print("saveHistory")
     mmr = request.json.get("history")
     collection_name = "QAHistory"
     mg.insert_data_clear(collection_name, mmr)
-    return jsonify(['success'])
+    return jsonify(["success"])
     # collection_name = "QAHistory"
     # filiList = mg.fetch_alldata_db(collection_name)
     # return jsonify(filiList)
+
 
 @app.route("/getFileTextSeq", methods=["POST"])
 def getFileTextSeq():
@@ -540,6 +579,7 @@ def getFileTextSeq():
     collection_name = "SeqVector"
     filiList = mg.fetch_data_find_db(collection_name, "fileName", fileName)
     return jsonify(filiList)
+
 
 @app.route("/FileListDelOne", methods=["POST"])
 def FileListDelOne():
@@ -554,13 +594,14 @@ def FileListDelOne():
 @app.route("/QA", methods=["POST"])
 def QandA():
     questions = request.json.get("questions")
+    original_query = questions
 
     # 检索参考值 0为关键词;1为余弦相似度;2为欧氏距离
     searchWay = request.json.get("searchWay")
     # 检索强度
     searchWeight = request.json.get("searchWeight")
-    outKnowledge = ''
-    most_similar_data = ''
+    outKnowledge = ""
+    most_similar_data = ""
     # 是否优化提问
     reAsk = request.json.get("reAsk")
     # 是否预回答优化
@@ -619,19 +660,21 @@ def QandA():
         + outKnowledge
     )
 
-    user_input = prompts + "下面是用户的问题，请回答：" + questions
-    answers = ''
-    # answers = "卷烟货源供应方式在提供的资料中没有直接说明，但可以根据常规的商业操作推断，卷烟货源供应通常有以下几种方式：1. **直接供应**：烟草公司直接向零售客户供应卷烟，这通常涉及配送中心发放促销品给零售商，如资料中第十九条所述，依据审批程序和《卷烟促销品领用单》进行。2. **分销网络供应**：通过建立分销网络，烟草公司可以通过分销商或批发商向零售商供应卷烟。3. **电商平台供应**：随着技术的发展，烟草公司也可能通过官方电商平台或合作第三方电商平台，如资料中提到的“香溢家”APP，进行线上供应。4. **库存管理供应**：烟草公司会定期对促销品进行盘库，如资料中第二十条所述，确保库存与帐目相符，从而有效管理货源供应。在供应过程中，烟草公司会考虑到促销活动的类型（如品规培育性活动或退市卸库性活动），合理安排货源，以满足市场需求，同时确保促销活动的合规性。促销活动的具体方式包括线上促销和线下促销，这些活动都会对货源供应产生影响。若需要具体了解卷烟货源供应的详细信息，建议参考烟草公司提供的具体操作手册或直接咨询烟草公司的相关部门。"
-    # -----------------------------------------------------------
-    messages += [{"role": "user", "content": user_input}]
-    response = client.chat.completions.create(
-        model="glm-4", messages=messages  # 填写需要调用的模型名称
-    )
-    response_message = response.choices[0].message.content
+    user_input = prompts + "下面是用户的问题，请回答：" + original_query
+    # answers = ""
+
+    # messages += [{"role": "user", "content": user_input}]
+    # response = client.chat.completions.create(
+    #     model="glm-4", messages=messages  # 填写需要调用的模型名称
+    # )
+    # response_message = response.choices[0].message.content
+
+    response_message = chatmodel(user_input)
     answers = str(response_message)
     # -----------------------------------------------------------
     return jsonify({"answers": answers, "quote": list(quoteList)})
 
 
 if __name__ == "__main__":
+    # print("general", chatmodel("1+1=多少"))
     app.run(debug=True, port=3000)

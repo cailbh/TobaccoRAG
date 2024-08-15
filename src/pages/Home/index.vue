@@ -19,8 +19,9 @@
         </div>
       </div>
       <div id="menuDiv">
-        <el-menu :default-active="defaultActive" class="el-menu" @open="handleOpen" @close="handleClose" @select="select"
-          background-color="rgb(244, 244, 247)" text-color="rgb(156, 158, 161)" active-text-color="rgb(64, 110, 245)">
+        <el-menu :default-active="defaultActive" class="el-menu" @open="handleOpen" @close="handleClose"
+          @select="select" background-color="rgb(244, 244, 247)" text-color="rgb(156, 158, 161)"
+          active-text-color="rgb(64, 110, 245)">
           <el-menu-item index="1">
             <template slot="title">
               <i class="el-icon-upload"></i>
@@ -65,11 +66,11 @@ export default {
   data() {
     return {
       fileContent: '',
-      curFileName:'',
+      curFileName: '',
       textData: [
         { index: 0, sentence: '' },
       ],
-      defaultActive:"3",
+      defaultActive: "3",
       mLigntcolor: [
         "#ff9c9c",
         "#cc88b0",
@@ -113,6 +114,20 @@ export default {
     handleFileChange(event) {
       const file = event.target.files[0];
       let fileName = file.name;
+
+      // 保存文件
+      let formData = new FormData();
+      formData.append('file', file)
+      this.$http
+        .post("/api/filesave", formData, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then((response) => {
+          console.log("OK")
+        });
+
       this.$bus.$emit("curFileName", fileName);
     },
     handleOpen(key, keyPath) {
@@ -128,7 +143,7 @@ export default {
       _this.currentView = ""
       if (key == '1') {
         _this.currentView = "FilePreSeq";
-        _this.defaultActive="2";
+        _this.defaultActive = "2";
         _this.$refs.fileUpload.click();
       }
       if (key == '2') {
@@ -148,8 +163,8 @@ export default {
     const _this = this;
     this.$el.style.setProperty("--heightStyle", document.documentElement.clientHeight + "px");
     this.$bus.$on('changeFilePre', (val) => {
-        _this.curFileName = val;
-        _this.currentView = "FilePreSeq";
+      _this.curFileName = val;
+      _this.currentView = "FilePreSeq";
     });
   },
   beforeDestroy() {

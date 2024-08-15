@@ -14,11 +14,8 @@
     </div>
     <div id="FilePreSeqBody">
       <div class="filePre">
-        
-        <div class="docWrap">
-            <div ref="prePanel"></div>
-          </div>
-        <el-card class="filePre-card filePreC">
+
+        <el-card class="filePre-card filePreC" style="position: absolute; z-index: 2;">
           <div slot="header" class="clearfix">
             <span class="h1Txt">文件预览</span>
             <span>&nbsp;</span>
@@ -38,6 +35,10 @@
             </el-row>
           </div> -->
         </el-card>
+
+        <div class="docWrap">
+          <div ref="prePanel"></div>
+        </div>
       </div>
       <div class="toolsDiv">
         <el-card class="filePre-card  tools-card">
@@ -61,7 +62,7 @@
             </el-slider>
           </div>
 
-          <div class="halfDiv"v-show="dgShow">
+          <div class="halfDiv" v-show="dgShow">
             <span class="h3Txt">理想重叠长度: {{ overlap }}</span>
             <!-- <el-input-number class="inputNumbe" v-model="overlap" controls-position="right"></el-input-number> -->
             <!-- <div class="slider-value">/div> -->
@@ -78,7 +79,7 @@
           </div>
           <div class="halfDiv" v-show="gsShow">
             <span class="h3Txt">父块分割符: {{ SplitSybsChart }}</span>
-            <el-input v-model="SplitSybs" size="small" style="width: 200px;":placeholder="SplitSybsChart"></el-input>
+            <el-input v-model="SplitSybs" size="small" style="width: 200px;" :placeholder="SplitSybsChart"></el-input>
             <!-- <el-input-number class="inputNumbe" v-model="overlap" controls-position="right"></el-input-number> -->
             <!-- <div class="slider-value">/div> -->
             <!-- <el-slider class="custom-slider" v-model="overlap" :show-tooltip="false" :max="chunkSize"> -->
@@ -180,16 +181,16 @@ export default {
   components: {},
   data() {
     return {
-      dgShow:true,
-      gsShow:false,
+      dgShow: true,
+      gsShow: false,
       pdfPagesNum: 0,
       currentpage: 2,
       textNum: 600,
       editingIndex: null,
-      SplitSybs:"",
-      SplitSybsChart:"章",
-      SplitSybsArt:"条",
-      SplitType:0,
+      SplitSybs: "",
+      SplitSybsChart: "章",
+      SplitSybsArt: "条",
+      SplitType: 0,
       pdfUrl: '',
       fileName: '',
       rate: 1,
@@ -212,12 +213,12 @@ export default {
     }
   },
   methods: {
-    dgShowClk(){
+    dgShowClk() {
       this.dgShow = true;
       this.gsShow = false;
       this.SplitType = 0;
     },
-    gsShowClk(){
+    gsShowClk() {
       this.gsShow = true;
       this.dgShow = false;
       this.SplitType = 1;
@@ -246,17 +247,17 @@ export default {
       });
     },
     chunkText(index) {
-      console.log("cccc",this.textData[index])
+      console.log("cccc", this.textData[index])
       const _this = this;
       this.$http
-        .post("/api/chunkWordToSeq", { textData: _this.textData[index]['sentence'], overlap: _this.overlap, chunkSize: _this.chunkSize}, {
+        .post("/api/chunkWordToSeq", { textData: _this.textData[index]['sentence'], overlap: _this.overlap, chunkSize: _this.chunkSize }, {
           headers: {
             'Content-Type': 'application/json'
           }
         })
         .then((res) => {
           let seqData = res.body
-          
+
           _this.textData.splice(index, 1, ...seqData);
           _this.updataChunk(_this.textData);
           // _this.$message({
@@ -411,7 +412,7 @@ export default {
       let fileName = this.curFileName;
       let SplitType = this.SplitType;
       this.$http
-        .post("/api/wordToSeq", { file: fileName, overlap: overlap, chunkSize: chunkSize,SplitType: SplitType}, {
+        .post("/api/wordToSeq", { file: fileName, overlap: overlap, chunkSize: chunkSize, SplitType: SplitType }, {
           headers: {
             'Content-Type': 'application/json'
           }
@@ -452,7 +453,6 @@ export default {
         });
     },
     fileChange(fileName) {
-      console.log('fileName',fileName)
       const _this = this;
       axios({
         method: "post",
@@ -476,7 +476,7 @@ export default {
           trimXmlDeclaration: true, //如果为真，xml声明将在解析之前从xml文档中删除
           debug: false, // 启用额外的日志记录
         };
-        if(this.$refs.prePanel){
+        if (this.$refs.prePanel) {
           docx.renderAsync(blob, this.$refs.prePanel, null, option); // 渲染到页面
         }
         // if (window.createObjectURL != undefined) {
@@ -559,7 +559,7 @@ export default {
   mounted() {
     const _this = this;
     if (this.curFileName != '') {
-      _this.fileChange(_this.curFileName + '.docx')
+      _this.fileChange(_this.curFileName + '.pdf')
     }
     this.$bus.$on('curFileName', (val) => {
       _this.curFileName = val;
