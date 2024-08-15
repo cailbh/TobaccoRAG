@@ -25,12 +25,15 @@ import reranker as rerank
 import requests
 import json
 
-file_path = "D:\data\\"
+from waitress import serve
 
+file_path = "D:\data\\"
+llm_url = "http://192.168.3.118:5000/ChatQA"
 # 读取json文件
 with open("./config.json", "r") as f:
     data = json.load(f)
     file_path = data["file_path"]
+    llm_url = data["llm_url"]
 
 
 def convert_word_to_pdf(input_path, output_path):
@@ -39,7 +42,15 @@ def convert_word_to_pdf(input_path, output_path):
     pdf_file = os.path.join(
         output_path, os.path.splitext(os.path.basename(input_path))[0] + ".pdf"
     )
-    word_app = win32.gencache.EnsureDispatch("Word.Application")
+    try:
+        # print("wps called")
+        word_app = win32.gencache.EnsureDispatch("Kwps.Application")
+        print("wps finished")
+    except:
+        # print("word")
+        word_app = win32.gencache.EnsureDispatch("Word.Application")
+        print("word finished")
+
     # 设置应用程序可见性为False（不显示Word界面）
     word_app.Visible = False
     try:
@@ -70,7 +81,7 @@ def convert_ofd_to_pdf(ofd_file, output_dir):
 
 
 def chatmodel(query):
-    url = "http://192.168.3.118:5000/ChatQA"
+    url = llm_url
     datas = {"questions": query}
     datas = json.dumps(datas)
     head = {"Content-Type": "application/json"}
@@ -684,5 +695,9 @@ def QandA():
     return jsonify({"answers": answers, "quote": list(quoteList)})
 
 
+# if __name__ == "__main__":
+# app.run(debug=True, port=3000)
+
+# 启动 Waitress 服务器
 if __name__ == "__main__":
-    app.run(debug=True, port=3000)
+    serve(app, host="0.0.0.0", port=3000)

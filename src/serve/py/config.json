@@ -1,5 +1,9 @@
 {
     "file_path": "D:/data/",
     "reranker_path": "../models/bge-reranker-base",
-    "sentence2Vec_path" : "../models/bge-large-zh-v1.5"
+    "sentence2Vec_path": "../models/bge-large-zh-v1.5",
+    "llm_url": "http://10.44.138.202:5000/ChatQA",
+    "mongodb_url": "mongodb://localhost:27017/",
+    "db_name": "Tobacco",
+    "collection_name": "SeqVector"
 }
