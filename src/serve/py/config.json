@@ -1,0 +1,5 @@
+{
+    "file_path": "D:/data/",
+    "reranker_path": "../models/bge-reranker-base",
+    "sentence2Vec_path" : "../models/bge-large-zh-v1.5"
+}

@@ -27,6 +27,11 @@ import json
 
 file_path = "D:\data\\"
 
+# 读取json文件
+with open("./config.json", "r") as f:
+    data = json.load(f)
+    file_path = data["file_path"]
+
 
 def convert_word_to_pdf(input_path, output_path):
     pythoncom.CoInitialize()
@@ -195,6 +200,10 @@ def file_upload():
         response.headers.set(
             "Content-Disposition", "attachment", filename="sample.docx"
         )
+        if not os.path.exists(pdf_path):
+            # return send_file(f'{file_path}/{file}', as_attachment=True)
+            # 执行文件转换
+            convert_word_to_pdf(path, outpath)
         return response
     if os.path.exists(pdf_path):
         print("pdf exists")
@@ -223,7 +232,7 @@ def file_upload():
 
 @app.route("/wordToSeq", methods=["POST"])
 def word2seq():
-    file = request.json.get("file").split(".")[0]+".docx"
+    file = request.json.get("file").split(".")[0] + ".docx"
     overlap = request.json.get("overlap")
     chunkSize = request.json.get("chunkSize")
     SplitType = request.json.get("SplitType")
@@ -501,9 +510,9 @@ def euDistance(questions):
 
 # 优化回答
 def reQuery(questions):
-    client = ZhipuAI(
-        api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
-    )  # 填写您自己的APIKey
+    # client = ZhipuAI(
+    #     api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
+    # )  # 填写您自己的APIKey
     # 优化提问
     messages = []
     user_input = (
@@ -524,9 +533,9 @@ def reQuery(questions):
 
 # 预回答
 def preAnswer(questions):
-    client = ZhipuAI(
-        api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
-    )  # 填写您自己的APIKey
+    # client = ZhipuAI(
+    #     api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
+    # )  # 填写您自己的APIKey
     # 优化提问
     messages = []
     user_input = (
@@ -651,9 +660,9 @@ def QandA():
 
     messages = []
     # 问答的参数
-    client = ZhipuAI(
-        api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
-    )  # 填写您自己的APIKey
+    # client = ZhipuAI(
+    #     api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
+    # )  # 填写您自己的APIKey
 
     prompts = (
         "你是一名文件数据管理人员，需要对用户的问题根据资料精准得回答，如果资料中得不出结论，就不要回答，下面是相关的资料：\n"
@@ -676,5 +685,4 @@ def QandA():
 
 
 if __name__ == "__main__":
-    # print("general", chatmodel("1+1=多少"))
     app.run(debug=True, port=3000)

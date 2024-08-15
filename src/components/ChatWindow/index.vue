@@ -187,7 +187,7 @@ export default {
                 this.preAns = true
             }
             else {
-                if (val[2].checked[0] == "优化提问") {
+                if (val[2].checked[0] == "假设文档嵌入") {
                     this.reAsk = true
                     this.preAns = false
                 }
@@ -223,10 +223,6 @@ export default {
 .chatText {
     width: 100%;
     word-wrap: break-word;
-    white-space: pre-wrap; /* 保留空格和换行符 */
-    font-family: inherit; /* 保持字体一致 */
-    font-size: inherit; /* 保持字体大小一致 */
-    line-height: inherit; /* 保持行高一致 */
 }
 
 .isMeText {
