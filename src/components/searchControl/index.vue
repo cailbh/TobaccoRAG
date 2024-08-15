@@ -11,7 +11,7 @@
             <div style="display: flex; position: relative; width: 100%;height: 150px;justify-content: space-around;">
                 <div style="width: 40%;height: 100%; position: relative;">
                     <div class="title" style="height: 16%;">
-                        检索参考值
+                        检索度量值
                     </div>
 
                     <el-radio-group v-model="controlList[0].checked">
@@ -25,14 +25,14 @@
                 <div style="width: 45%;height: 100%; position: relative;">
                     <div class="title" style="height: 16%;">优化方法</div>
                     <div style="width: 100%;height: 42%; position: relative;">
-                        <div class="title2">&nbsp;&nbsp;问答优化</div>
+                        <div class="title2">&nbsp;&nbsp;排列优化</div>
                         <el-checkbox-group v-model="controlList[1].checked">
                             <el-checkbox :label="controlList[1].content[0]"></el-checkbox>
                             <el-checkbox :label="controlList[1].content[1]"></el-checkbox>
                         </el-checkbox-group>
                     </div>
                     <div style="width: 100%;height: 42%; position: relative;">
-                        <div class="title2">&nbsp;&nbsp;排列优化</div>
+                        <div class="title2">&nbsp;&nbsp;问答优化</div>
                         <el-checkbox-group v-model="controlList[2].checked">
                             <el-checkbox :label="controlList[2].content[0]"></el-checkbox>
                             <el-checkbox :label="controlList[2].content[1]"></el-checkbox>
@@ -43,7 +43,7 @@
 
 
             <div class="block">
-                <span class="title">设置检索个数</span>
+                <span class="title">检索强度</span>
                 <el-slider v-model="weight" show-input :min="1" :max="10" :step="1">
                 </el-slider>
             </div>
@@ -73,7 +73,7 @@ export default {
                     preChecked: [],
                 },
                 {
-                    content: ["优化提问", "预回答"],
+                    content: ["优化表述", "假设文档嵌入"],
                     checked: [],
                     preChecked: [],
                 }

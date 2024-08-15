@@ -14,14 +14,18 @@
     </div>
     <div id="FilePreSeqBody">
       <div class="filePre">
-        <el-card class="filePre-card ">
+        
+        <div class="docWrap">
+            <div ref="prePanel"></div>
+          </div>
+        <el-card class="filePre-card filePreC">
           <div slot="header" class="clearfix">
             <span class="h1Txt">文件预览</span>
             <span>&nbsp;</span>
             <span class="h2Txt">{{ curFileName }}</span>
           </div>
-          <div class="pdfContainer" ref="bodypanel" style="overflow-y: auto;overflow-x: hidden;">
-            <div class="canvasContainer" style="position: relative;width: 100%;height: 100%;">
+          <!-- <div class="pdfContainer" ref="bodypanel" style="overflow-y: auto;overflow-x: hidden;">
+            <div class="canvasContainer"  ref="prePanel" style="position: relative;width: 100%;height: 100%;">
               <canvas ref="renderContext"></canvas>
             </div>
           </div>
@@ -32,7 +36,7 @@
                   @current-change="currentChange" />
               </el-col>
             </el-row>
-          </div>
+          </div> -->
         </el-card>
       </div>
       <div class="toolsDiv">
@@ -42,8 +46,14 @@
             <span class="h1Txt">参数配置</span>
             <el-tag class="infoTags" size="mini" type="info">{{ `总分段：${textData.length}` }}</el-tag>
             <el-tag class="infoTags" size="mini" type="info">{{ `总字数 ${textNum}` }}</el-tag>
+
+            <el-button class="buts1" size="small" type="primary" @click="dgShowClk"
+              icon="el-icon-s-claim">递归分割</el-button>
+
+            <el-button class="buts1" size="small" type="primary" @click="gsShowClk"
+              icon="el-icon-s-order">格式分割</el-button>
           </div>
-          <div class="halfDiv">
+          <div class="halfDiv" v-show="dgShow">
             <span class="h3Txt">理想分块长度: {{ chunkSize }}</span>
             <!-- <el-input-number class="inputNumbe" v-model="chunkSize" controls-position="right"></el-input-number> -->
             <!-- <div class="slider-value"></div> -->
@@ -51,14 +61,14 @@
             </el-slider>
           </div>
 
-          <div class="halfDiv">
+          <div class="halfDiv"v-show="dgShow">
             <span class="h3Txt">理想重叠长度: {{ overlap }}</span>
             <!-- <el-input-number class="inputNumbe" v-model="overlap" controls-position="right"></el-input-number> -->
             <!-- <div class="slider-value">/div> -->
             <el-slider class="custom-slider" v-model="overlap" :show-tooltip="false" :max="chunkSize">
             </el-slider>
           </div>
-          <div class="halfDiv">
+          <div class="halfDiv" v-show="dgShow">
             <span class="h3Txt">自定义分割符: {{ SplitSybs }}</span>
             <el-input v-model="SplitSybs" size="small" :placeholder="SplitSybs"></el-input>
             <!-- <el-input-number class="inputNumbe" v-model="overlap" controls-position="right"></el-input-number> -->
@@ -66,10 +76,31 @@
             <!-- <el-slider class="custom-slider" v-model="overlap" :show-tooltip="false" :max="chunkSize"> -->
             <!-- </el-slider> -->
           </div>
+          <div class="halfDiv" v-show="gsShow">
+            <span class="h3Txt">父块分割符: {{ SplitSybsChart }}</span>
+            <el-input v-model="SplitSybs" size="small" style="width: 200px;":placeholder="SplitSybsChart"></el-input>
+            <!-- <el-input-number class="inputNumbe" v-model="overlap" controls-position="right"></el-input-number> -->
+            <!-- <div class="slider-value">/div> -->
+            <!-- <el-slider class="custom-slider" v-model="overlap" :show-tooltip="false" :max="chunkSize"> -->
+            <!-- </el-slider> -->
+          </div>
+          <div class="halfDiv" v-show="gsShow">
+            <span class="h3Txt">子块分割符: {{ SplitSybsArt }}</span>
+            <el-input v-model="SplitSybs" size="small" style="width: 200px;;" :placeholder="SplitSybsArt"></el-input>
+            <!-- <el-input-number class="inputNumbe" v-model="overlap" controls-position="right"></el-input-number> -->
+            <!-- <div class="slider-value">/div> -->
+            <!-- <el-slider class="custom-slider" v-model="overlap" :show-tooltip="false" :max="chunkSize"> -->
+            <!-- </el-slider> -->
+          </div>
           <!-- </div> -->
-          <el-button class="buts" size="small" type="primary" @click="textChunkClk" icon="el-icon-search">开始分割</el-button>
+          <el-button class="buts" size="small" type="primary" @click="textChunkClk"
+            icon="el-icon-s-opportunity">开始分割</el-button>
 
-          <el-button class="buts" size="small" type="primary" @click="confirmClk" icon="el-icon-search">确认导入</el-button>
+          <el-button class="buts" size="small" type="primary" @click="confirmClk" icon="el-icon-upload">确认导入</el-button>
+          <!-- <el-button v-show="dgShow" class="buts" size="small" type="primary" @click="textChunkClk"
+            icon="el-icon-s-opportunity">开始分割</el-button>
+
+          <el-button v-show="dgShow" class="buts" size="small" type="primary" @click="confirmClk" icon="el-icon-upload">确认导入</el-button> -->
 
         </el-card>
       </div>
@@ -86,6 +117,8 @@
 
               <el-button class="chunkButs" size="small" type="primary" plain
                 @click="editText(item.index)">编辑</el-button>
+              <el-button class="chunkButs" size="small" type="primary" plain
+                @click="chunkText(item.index)">分割</el-button>
 
               <el-button class="chunkButs" size="small" type="primary" plain @click="addText(item.index)">新增</el-button>
               <template v-if="mergeHoverIndex != item.index">
@@ -141,17 +174,22 @@ import axios from "axios";
 import * as PDFJS from "pdfjs-dist/legacy/build/pdf";  // 引入PDFJS 
 import pdfjsWorker from "pdfjs-dist/legacy/build/pdf.worker.entry.js"; // 引入workerSrc的地址
 PDFJS.GlobalWorkerOptions.workerSrc = pdfjsWorker; //设置PDFJS.GlobalWorkerOptions.workerSrc的地址
-
+const docx = require("docx-preview");
 export default {
   props: ["curFileName"],
   components: {},
   data() {
     return {
+      dgShow:true,
+      gsShow:false,
       pdfPagesNum: 0,
       currentpage: 2,
       textNum: 600,
       editingIndex: null,
       SplitSybs:"",
+      SplitSybsChart:"章",
+      SplitSybsArt:"条",
+      SplitType:0,
       pdfUrl: '',
       fileName: '',
       rate: 1,
@@ -174,6 +212,16 @@ export default {
     }
   },
   methods: {
+    dgShowClk(){
+      this.dgShow = true;
+      this.gsShow = false;
+      this.SplitType = 0;
+    },
+    gsShowClk(){
+      this.gsShow = true;
+      this.dgShow = false;
+      this.SplitType = 1;
+    },
     mergeButHover(index) {
       this.mergeHoverIndex = index;
     },
@@ -196,6 +244,34 @@ export default {
       this.$nextTick(() => {
         this.$refs.input[0].focus();
       });
+    },
+    chunkText(index) {
+      console.log("cccc",this.textData[index])
+      const _this = this;
+      this.$http
+        .post("/api/chunkWordToSeq", { textData: _this.textData[index]['sentence'], overlap: _this.overlap, chunkSize: _this.chunkSize}, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then((res) => {
+          let seqData = res.body
+          
+          _this.textData.splice(index, 1, ...seqData);
+          _this.updataChunk(_this.textData);
+          // _this.$message({
+          //   message: '文本分割完成',
+          //   type: 'success'
+          // });
+          _this.$notify({
+            title: '文本分割完成',
+            type: 'success',
+            message: '文本分割完成,请确认后添加至知识库'
+          });
+        });
+      // this.textData.splice(index, 0, { 'sentence': '' });
+      // this.updataChunk(this.textData);
+      this.contextMenu.visible = false;
     },
     updataChunk(data) {
       this.textData = this.processTexts(data);
@@ -333,8 +409,9 @@ export default {
       let chunkSize = this.chunkSize;
       let overlap = this.overlap;
       let fileName = this.curFileName;
+      let SplitType = this.SplitType;
       this.$http
-        .post("/api/wordToSeq", { file: fileName, overlap: overlap, chunkSize: chunkSize }, {
+        .post("/api/wordToSeq", { file: fileName, overlap: overlap, chunkSize: chunkSize,SplitType: SplitType}, {
           headers: {
             'Content-Type': 'application/json'
           }
@@ -375,6 +452,7 @@ export default {
         });
     },
     fileChange(fileName) {
+      console.log('fileName',fileName)
       const _this = this;
       axios({
         method: "post",
@@ -386,17 +464,32 @@ export default {
       }).then((res) => {
         console.log(res)
         let blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-        if (window.createObjectURL != undefined) {
-          // basic
-          this.pdfUrl = window.createObjectURL(blob);
-        } else if (window.URL != undefined) {
-          // mozilla(firefox)
-          this.pdfUrl = window.URL.createObjectURL(blob);
-        } else if (window.webkitURL != undefined) {
-          // webkit or chrome
-          this.pdfUrl = window.webkitURL.createObjectURL(blob);
+        const option = {
+          className: "docx", // 默认和文档样式类的类名/前缀
+          inWrapper: true, // 启用围绕文档内容渲染包装器
+          ignoreWidth: false, // 禁止页面渲染宽度
+          ignoreHeight: false, // 禁止页面渲染高度
+          ignoreFonts: false, // 禁止字体渲染
+          breakPages: true, // 在分页符上启用分页
+          ignoreLastRenderedPageBreak: true, //禁用lastRenderedPageBreak元素的分页
+          experimental: false, //启用实验性功能（制表符停止计算）
+          trimXmlDeclaration: true, //如果为真，xml声明将在解析之前从xml文档中删除
+          debug: false, // 启用额外的日志记录
+        };
+        if(this.$refs.prePanel){
+          docx.renderAsync(blob, this.$refs.prePanel, null, option); // 渲染到页面
         }
-        this.getPdf(this.pdfUrl, 1);
+        // if (window.createObjectURL != undefined) {
+        //   // basic
+        //   this.pdfUrl = window.createObjectURL(blob);
+        // } else if (window.URL != undefined) {
+        //   // mozilla(firefox)
+        //   this.pdfUrl = window.URL.createObjectURL(blob);
+        // } else if (window.webkitURL != undefined) {
+        //   // webkit or chrome
+        //   this.pdfUrl = window.webkitURL.createObjectURL(blob);
+        // }
+        // this.getPdf(this.pdfUrl, 1);
         // docx.renderAsync(data, this.$refs.fileTest); // 渲染到页面
       });
       this.getSeqData(fileName);
@@ -466,7 +559,7 @@ export default {
   mounted() {
     const _this = this;
     if (this.curFileName != '') {
-      _this.fileChange(_this.curFileName + '.pdf')
+      _this.fileChange(_this.curFileName + '.docx')
     }
     this.$bus.$on('curFileName', (val) => {
       _this.curFileName = val;

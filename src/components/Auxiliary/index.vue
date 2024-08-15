@@ -5,7 +5,7 @@
       <el-button class="tagBut" type="danger" size="mini" icon="el-icon-close" circle @click="close"></el-button>
     </div>
     <div id="AuxiliaryPanelDiv" class="dataBody" ref="AuxiliaryPanelDiv">
-      <div class="pdfContainer" ref="bodypanel" style="overflow-y: auto;overflow-x: hidden; background-color: #fff;">
+      <div class="pdfPanel" ref="bodypanel" style="overflow-y: auto;overflow-x: hidden; background-color: #fff;">
         <div style="position: relative; width: 100%;">
           <p style="position: relative; margin:10px auto; text-align: center; width: 100%;">{{ fileName }}</p>
           <p

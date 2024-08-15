@@ -112,6 +112,13 @@
   font-weight: 500;
   font-size: 18px;
 }
+
+.docWrap {
+  width: 100%;
+  height: 100%;
+  float: right;
+  overflow-x: auto;
+}
 .h3Txt{
   font-family: "Arial","Microsoft YaHei","黑体","宋体",sans-serif;
 
@@ -147,6 +154,12 @@
 }
 .filePre-card{
   margin: 2px;
+  height: calc(100% - 10px);
+  width: calc(100% - 10px);
+}
+.filePre-card .filePreC{
+  margin: 2px;
+  overflow: scroll;
   height: calc(100% - 10px);
   width: calc(100% - 10px);
 }
@@ -192,9 +205,15 @@
   float: right;
   margin: 25px 7px;
 }
+.buts1{
+  float: right;
+  margin: 2px 7px;
+}
 .chunkButs{
   float: right;
-  margin: 0px 10px;
+  
+  /* margin-left 3px */
+  margin: 0px 3px !important;
 }
 .chunkButs1{
   float: right;

@@ -73,10 +73,52 @@ export default {
             isReOrder: false,
             searchWeight: 3
         };
+    }, 
+     watch: {
+        messages(val) {
+            this.saveHistory()
+        },
+    },
+    created() {
+        const _this = this;
+        this.getHistory()
+        this.$nextTick(() => {
+        });
     },
     methods: {
         quoteClk(val) {
             this.$bus.$emit("quote", val);
+        },
+        getHistory(){
+            const _this = this;
+            this.$http
+                .get("/api/getHistory", { params: {} }, {})
+                .then((response) => {
+                    console.log("getHistory",response)
+                    _this.messages = response.body
+                    // }
+                });
+        },
+        saveHistory(){
+            const _this = this;
+            this.$http
+                .post("/api/saveHistory", { history: _this.messages,}, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then((res) => {
+                    // _this.$message({
+                    //   message: '成功建立向量数据库',
+                    //   type: 'success'
+                    // });
+
+                    // _this.$notify({
+                    //     title: '保存成功',
+                    //     type: 'success',
+                    //     message: '当前数据已添加至知识库'
+                    // });
+                });
         },
         submit() {
             const _this = this;
@@ -181,7 +223,10 @@ export default {
 .chatText {
     width: 100%;
     word-wrap: break-word;
-    /* white-space: pre-wrap; */
+    white-space: pre-wrap; /* 保留空格和换行符 */
+    font-family: inherit; /* 保持字体一致 */
+    font-size: inherit; /* 保持字体大小一致 */
+    line-height: inherit; /* 保持行高一致 */
 }
 
 .isMeText {

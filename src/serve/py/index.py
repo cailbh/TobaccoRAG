@@ -23,7 +23,7 @@ import ast
 from bson import ObjectId, json_util
 import reranker as rerank
 
-file_path = "./data/杭烟营销中心各类标准文件/"
+file_path = "D:\Work\YanCao\TobaccoRAG\data\杭烟营销中心各类标准文件/"
 
 
 def convert_word_to_pdf(input_path, output_path):
@@ -151,6 +151,7 @@ def file_upload():
     path = file_path + file
     outpath = file_path
     pdf_path = f"{outpath}/{file_name_ori}.pdf"
+    docx_path = f"{outpath}/{file_name_ori}.docx"
 
     # 集合名称
     collection_name = "fileList"
@@ -158,7 +159,11 @@ def file_upload():
     print(collection_name, "fileName", file_name_ori, oriFileData)
     if (oriFileData == None) | (oriFileData == []):
         mg.insert_data(collection_name, [{"fileName": file_name_ori}])
-
+    if os.path.exists(docx_path):
+        docx_blob = myTools.read_pdf_as_blob(docx_path)
+        response = Response(io.BytesIO(docx_blob), mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        response.headers.set("Content-Disposition", "attachment", filename="sample.docx")
+        return response
     if os.path.exists(pdf_path):
         pdf_blob = myTools.read_pdf_as_blob(pdf_path)
         response = Response(io.BytesIO(pdf_blob), mimetype="application/pdf")
@@ -185,15 +190,32 @@ def file_upload():
 
 @app.route("/wordToSeq", methods=["POST"])
 def word2seq():
-    file = request.json.get("file")
+    file = request.json.get("file").split(".")[0]+".docx"
     overlap = request.json.get("overlap")
     chunkSize = request.json.get("chunkSize")
+    SplitType = request.json.get("SplitType")
     path = file_path + file
     word = myTools.read_word_file(path)
     # single_sentences_list = remove_newline_items(re.split(r'(?<=[。.?!\n\n])\s+', word))
 
     # sentences = [{'sentence': x, 'index': i} for i, x in enumerate(single_sentences_list)]
-    sentences = getSeq.RCSplit(word, chunkSize, overlap)
+    # sentences = getSeq.RCSplit(word, chunkSize, overlap)
+    sentence = []
+    print(SplitType)
+    if SplitType == 0:
+        sentences = getSeq.RCSplit(word, chunkSize, overlap)
+    else:
+        sentences = getSeq.split_documentByOriChunk(word)
+    return jsonify(sentences)
+
+@app.route("/chunkWordToSeq", methods=["POST"])
+def chunkWordToSeq():
+    textData = request.json.get("textData")
+    overlap = request.json.get("overlap")
+    chunkSize = request.json.get("chunkSize")
+    
+    sentence = []
+    sentences = getSeq.RCSplit(textData, chunkSize, overlap)
     return jsonify(sentences)
 
 
@@ -309,7 +331,6 @@ def RRF(order1, order2, order3):
 
     sorted_rrf = np.array(score).argsort()[::-1]
 
-    print(score)
 
     most_similar_data = []
     for index in sorted_rrf:
@@ -453,7 +474,7 @@ def reQuery(questions):
     # 优化提问
     messages = []
     user_input = (
-        "你是一名烟草公司的数据管理人员，需要对用户的问题重新表达\n下面是用户的问题，请对其进行重新表述："
+        "你是一名文件数据管理人员，需要对用户的问题重新表达\n下面是用户的问题，请对其进行重新表述："
         + questions
     )
     messages += [{"role": "user", "content": user_input}]
@@ -475,7 +496,7 @@ def preAnswer(questions):
     # 优化提问
     messages = []
     user_input = (
-        "你是一名烟草公司的数据管理人员，需要对用户的问题精准的回答\n下面是用户的问题，请回答："
+        "你是一名文件数据管理人员，需要对用户的问题精准的回答\n下面是用户的问题，请回答："
         + questions
     )
     messages += [{"role": "user", "content": user_input}]
@@ -495,6 +516,23 @@ def getFileList():
     filiList = mg.fetch_alldata_db(collection_name)
     return jsonify(filiList)
 
+@app.route("/getHistory", methods=["GET"])
+def getHistory():
+    print('getHistory')
+    collection_name = "QAHistory"
+    filiList = mg.fetch_alldata_db(collection_name)
+    return jsonify(filiList)
+
+@app.route("/saveHistory", methods=["POST"])
+def saveHistory():
+    print('saveHistory')
+    mmr = request.json.get("history")
+    collection_name = "QAHistory"
+    mg.insert_data_clear(collection_name, mmr)
+    return jsonify(['success'])
+    # collection_name = "QAHistory"
+    # filiList = mg.fetch_alldata_db(collection_name)
+    # return jsonify(filiList)
 
 @app.route("/getFileTextSeq", methods=["POST"])
 def getFileTextSeq():
@@ -503,19 +541,28 @@ def getFileTextSeq():
     filiList = mg.fetch_data_find_db(collection_name, "fileName", fileName)
     return jsonify(filiList)
 
+@app.route("/FileListDelOne", methods=["POST"])
+def FileListDelOne():
+    print(111)
+    fileName = request.json.get("fileName").split(".")[0]
+    collection_name = "fileList"
+    mg.del_data_db(collection_name, "fileName", fileName)
+    filiList = mg.fetch_alldata_db(collection_name)
+    return jsonify(filiList)
+
 
 @app.route("/QA", methods=["POST"])
 def QandA():
     questions = request.json.get("questions")
-    print(questions)
 
     # 检索参考值 0为关键词;1为余弦相似度;2为欧氏距离
     searchWay = request.json.get("searchWay")
     # 检索强度
     searchWeight = request.json.get("searchWeight")
+    outKnowledge = ''
+    most_similar_data = ''
     # 是否优化提问
     reAsk = request.json.get("reAsk")
-    print(reAsk)
     # 是否预回答优化
     preAns = request.json.get("preAns")
     # 是否使用混合检索
@@ -568,14 +615,13 @@ def QandA():
     )  # 填写您自己的APIKey
 
     prompts = (
-        "你是一名烟草公司的数据管理人员，需要对用户的问题精准的回答，下面是你的资料：\n"
+        "你是一名文件数据管理人员，需要对用户的问题根据资料精准得回答，如果资料中得不出结论，就不要回答，下面是相关的资料：\n"
         + outKnowledge
     )
 
     user_input = prompts + "下面是用户的问题，请回答：" + questions
-    print(user_input)
-    answers = ""
-    # print(quoteList)
+    answers = ''
+    # answers = "卷烟货源供应方式在提供的资料中没有直接说明，但可以根据常规的商业操作推断，卷烟货源供应通常有以下几种方式：1. **直接供应**：烟草公司直接向零售客户供应卷烟，这通常涉及配送中心发放促销品给零售商，如资料中第十九条所述，依据审批程序和《卷烟促销品领用单》进行。2. **分销网络供应**：通过建立分销网络，烟草公司可以通过分销商或批发商向零售商供应卷烟。3. **电商平台供应**：随着技术的发展，烟草公司也可能通过官方电商平台或合作第三方电商平台，如资料中提到的“香溢家”APP，进行线上供应。4. **库存管理供应**：烟草公司会定期对促销品进行盘库，如资料中第二十条所述，确保库存与帐目相符，从而有效管理货源供应。在供应过程中，烟草公司会考虑到促销活动的类型（如品规培育性活动或退市卸库性活动），合理安排货源，以满足市场需求，同时确保促销活动的合规性。促销活动的具体方式包括线上促销和线下促销，这些活动都会对货源供应产生影响。若需要具体了解卷烟货源供应的详细信息，建议参考烟草公司提供的具体操作手册或直接咨询烟草公司的相关部门。"
     # -----------------------------------------------------------
     messages += [{"role": "user", "content": user_input}]
     response = client.chat.completions.create(
