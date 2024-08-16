@@ -29,11 +29,13 @@ from waitress import serve
 
 file_path = "D:\data\\"
 llm_url = "http://192.168.3.118:5000/ChatQA"
+threads_num = 20
 # 读取json文件
 with open("./config.json", "r") as f:
     data = json.load(f)
     file_path = data["file_path"]
     llm_url = data["llm_url"]
+    threads_num = data["threads_num"]
 
 
 def convert_word_to_pdf(input_path, output_path):
@@ -202,43 +204,60 @@ def file_upload():
     print(collection_name, "fileName", file_name_ori, oriFileData)
     if (oriFileData == None) | (oriFileData == []):
         mg.insert_data(collection_name, [{"fileName": file_name_ori}])
-    if os.path.exists(docx_path):
-        docx_blob = myTools.read_pdf_as_blob(docx_path)
-        response = Response(
-            io.BytesIO(docx_blob),
-            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
-        response.headers.set(
-            "Content-Disposition", "attachment", filename="sample.docx"
-        )
-        if not os.path.exists(pdf_path):
-            # return send_file(f'{file_path}/{file}', as_attachment=True)
-            # 执行文件转换
-            convert_word_to_pdf(path, outpath)
-        return response
-    if os.path.exists(pdf_path):
-        print("pdf exists")
-        pdf_blob = myTools.read_pdf_as_blob(pdf_path)
-        response = Response(io.BytesIO(pdf_blob), mimetype="application/pdf")
-        response.headers.set("Content-Disposition", "attachment", filename="sample.pdf")
-        return response
-    else:
-        # return send_file(f'{file_path}/{file}', as_attachment=True)
-        # 执行文件转换
-        convert_word_to_pdf(path, outpath)
 
-        # # 等待文件创建完成
-        for _ in range(30):  # 检查 30 次，每次等待 1 秒，总计 30 秒
-            if os.path.exists(pdf_path):
-                pdf_blob = myTools.read_pdf_as_blob(pdf_path)
-                response = Response(io.BytesIO(pdf_blob), mimetype="application/pdf")
-                response.headers.set(
-                    "Content-Disposition", "attachment", filename="sample.pdf"
-                )
-                return response
-            time.sleep(1)
+    # # 等待文件创建完成
+    for _ in range(30):  # 检查 30 次，每次等待 1 秒，总计 30 秒
+        if os.path.exists(docx_path):
+            print("docx exists")
+            docx_blob = myTools.read_pdf_as_blob(docx_path)
+            response = Response(
+                io.BytesIO(docx_blob),
+                mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+            response.headers.set(
+                "Content-Disposition", "attachment", filename="sample.docx"
+            )
+            if not os.path.exists(pdf_path):
+                # return send_file(f'{file_path}/{file}', as_attachment=True)
+                print("pdf not exists")
+                # 执行文件转换
+                convert_word_to_pdf(path, outpath)
+            return response
+        time.sleep(1)
+    print("file err")
+    return jsonify({"error": "File conversion timeout"}), 500
 
-        return jsonify({"error": "File conversion timeout"}), 500
+    # if os.path.exists(pdf_path):
+    #     print("pdf exists")
+    #     # pdf_blob = myTools.read_pdf_as_blob(pdf_path)
+    #     # response = Response(io.BytesIO(pdf_blob), mimetype="application/pdf")
+    #     # response.headers.set("Content-Disposition", "attachment", filename="sample.pdf")
+    #     return response
+    # else:
+    #     # return send_file(f'{file_path}/{file}', as_attachment=True)
+    #     # 执行文件转换
+    #     convert_word_to_pdf(path, outpath)
+
+    #     # # 等待文件创建完成
+    #     for _ in range(30):  # 检查 30 次，每次等待 1 秒，总计 30 秒
+    #         if os.path.exists(pdf_path):
+    #             # pdf_blob = myTools.read_pdf_as_blob(pdf_path)
+    #             # response = Response(io.BytesIO(pdf_blob), mimetype="application/pdf")
+    #             # response.headers.set(
+    #             #     "Content-Disposition", "attachment", filename="sample.pdf"
+    #             # )
+    #             docx_blob = myTools.read_pdf_as_blob(docx_path)
+    #             response = Response(
+    #                 io.BytesIO(docx_blob),
+    #                 mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    #             )
+    #             response.headers.set(
+    #                 "Content-Disposition", "attachment", filename="sample.docx"
+    #             )
+    #             return response
+    #         time.sleep(1)
+    #     print("convert_to_pdf err")
+    #     return jsonify({"error": "File conversion timeout"}), 500
 
 
 @app.route("/wordToSeq", methods=["POST"])
@@ -700,4 +719,4 @@ def QandA():
 
 # 启动 Waitress 服务器
 if __name__ == "__main__":
-    serve(app, host="0.0.0.0", port=3000)
+    serve(app, host="0.0.0.0", port=3000, threads=threads_num)
