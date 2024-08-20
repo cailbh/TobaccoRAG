@@ -4,7 +4,7 @@
         <div>
             <Auxiliary></Auxiliary>
         </div>
-        <div class="message-container">
+        <div class="message-container" id="chat-message-container">
             <div v-for="message in messages" :key="message.id" class="message">
                 <div v-if="message.isMe" class="isMe">
                     <div class="chatHead">
@@ -69,12 +69,12 @@ export default {
             searchWay: 1,
             reAsk: false,
             preAns: false,
-            isRRF: false,
+            isRRF: true,
             isReOrder: false,
-            searchWeight: 3
+            searchWeight: 5
         };
-    }, 
-     watch: {
+    },
+    watch: {
         messages(val) {
             this.saveHistory()
         },
@@ -83,26 +83,29 @@ export default {
         const _this = this;
         this.getHistory()
         this.$nextTick(() => {
+            setTimeout(() => {
+                _this.scrollToBottom();
+            }, 1000);
         });
     },
     methods: {
         quoteClk(val) {
             this.$bus.$emit("quote", val);
         },
-        getHistory(){
+        getHistory() {
             const _this = this;
             this.$http
                 .get("/api/getHistory", { params: {} }, {})
                 .then((response) => {
-                    console.log("getHistory",response)
+                    console.log("getHistory", response)
                     _this.messages = response.body
                     // }
                 });
         },
-        saveHistory(){
+        saveHistory() {
             const _this = this;
             this.$http
-                .post("/api/saveHistory", { history: _this.messages,}, {
+                .post("/api/saveHistory", { history: _this.messages, }, {
                     headers: {
                         'Content-Type': 'application/json'
                     }
@@ -126,6 +129,9 @@ export default {
                 let questions = _this.inputText;
                 this.messages.push({ id: Date.now(), text: this.inputText, isMe: true });
                 this.inputText = '';
+                setTimeout(() => {
+                    _this.scrollToBottom();
+                }, 1000);
                 this.$http
                     .post("/api/QA", {
                         questions: questions,
@@ -149,6 +155,9 @@ export default {
                         let markedText = marked(ans)
                         // console.log(markedText)
                         this.messages.push({ id: Date.now(), text: markedText, isMe: false, quote: quote });
+                        setTimeout(() => {
+                            _this.scrollToBottom();
+                        }, 1000);
                     });
             }
         },
@@ -202,6 +211,16 @@ export default {
             console.log(this.isRRF, this.isReOrder)
             // console.log(this.reAsk, this.preAns)
             // console.log(this.searchWay, this.searchWeight)
+        },
+        scrollToBottom() {
+            // 将聊天框拉到最底下
+            // 获取设置了滚动属性的div标签
+            const chat_message_container = document.getElementById('chat-message-container');
+            // 设置滚动的顶点坐标为滚动的总高度
+            if (chat_message_container) {
+                chat_message_container.scrollTop = chat_message_container.scrollHeight;
+                console.log(chat_message_container.scrollTop, chat_message_container.scrollHeight)
+            }
         }
     },
 };
@@ -292,7 +311,7 @@ export default {
     max-width: 100%;
     margin: 0 auto;
     overflow: hidden;
-    overflow-y: auto;
+    overflow-y: scroll;
     height: calc(100% - 80px);
     scrollbar-width: none;
     background-image: url('~@/assets/imgs/chatBack.png');

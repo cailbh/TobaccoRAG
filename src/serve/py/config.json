@@ -6,5 +6,5 @@
     "mongodb_url": "mongodb://localhost:27017/",
     "db_name": "Tobacco",
     "collection_name": "SeqVector",
-    "threads_num": 20
+    "threads_num": 16
 }

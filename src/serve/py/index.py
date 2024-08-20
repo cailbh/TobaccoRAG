@@ -38,6 +38,32 @@ with open("./config.json", "r") as f:
     threads_num = data["threads_num"]
 
 
+# 模型问答
+# 智谱模型
+def zhipuChat(input):
+    print("智谱called")
+    client = ZhipuAI(
+        api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
+    )  # 填写您自己的APIKey
+
+    messages = []
+    messages += [{"role": "user", "content": input}]
+    response = client.chat.completions.create(
+        model="glm-4", messages=messages  # 填写需要调用的模型名称
+    )
+    return response.choices[0].message.content
+
+
+def chatmodel(query):
+    print("llm called")
+    url = llm_url
+    datas = {"questions": query}
+    datas = json.dumps(datas)
+    head = {"Content-Type": "application/json"}
+    return requests.post(url, data=datas, headers=head).json()["answers"]
+
+
+# 文件类型转化
 def convert_word_to_pdf(input_path, output_path):
     pythoncom.CoInitialize()
     # 创建Word应用程序实例
@@ -47,11 +73,11 @@ def convert_word_to_pdf(input_path, output_path):
     try:
         # print("wps called")
         word_app = win32.gencache.EnsureDispatch("Kwps.Application")
-        print("wps finished")
+        print("wps openning")
     except:
         # print("word")
         word_app = win32.gencache.EnsureDispatch("Word.Application")
-        print("word finished")
+        print("word openning")
 
     # 设置应用程序可见性为False（不显示Word界面）
     word_app.Visible = False
@@ -82,14 +108,6 @@ def convert_ofd_to_pdf(ofd_file, output_dir):
     return pdf_file
 
 
-def chatmodel(query):
-    url = llm_url
-    datas = {"questions": query}
-    datas = json.dumps(datas)
-    head = {"Content-Type": "application/json"}
-    return requests.post(url, data=datas, headers=head).json()["answers"]
-
-
 # def convert_file_to_pdf(input_file, output_dir):
 #     if input_file.endswith('.docx') or input_file.endswith('.doc'):
 #         return convert_word_to_pdf(input_file, output_dir)
@@ -105,6 +123,21 @@ def ensure_directory_exists(directory):
         os.makedirs(directory)
 
 
+# 删除文件以及对应的数据库内容
+def fileremove(fileName):
+    pdf_path = f"{file_path}/{fileName}.pdf"
+    docx_path = f"{file_path}/{fileName}.docx"
+
+    if os.path.exists(pdf_path):
+        os.remove(pdf_path)
+        print(pdf_path + "已删除")
+
+    if os.path.exists(docx_path):
+        os.remove(docx_path)
+        print(docx_path + "已删除")
+
+
+# 文件预览功能
 def find_text_page_in_pdf(pdf_path, text):
     """
     在 PDF 文件中查找文字并返回所在页码
@@ -172,6 +205,7 @@ def file_pre():
     return response
 
 
+# 保存文件
 @app.route("/filesave", methods=["POST"])
 def file_save():
     if "file" not in request.files:
@@ -188,6 +222,7 @@ def file_save():
     return "successful"
 
 
+# 上传文件
 @app.route("/fileUpload", methods=["POST"])
 def file_upload():
     file = request.args.get("file")
@@ -260,6 +295,7 @@ def file_upload():
     #     return jsonify({"error": "File conversion timeout"}), 500
 
 
+# 分割
 @app.route("/wordToSeq", methods=["POST"])
 def word2seq():
     file = request.json.get("file").split(".")[0] + ".docx"
@@ -302,6 +338,9 @@ def seq2vec():
         sentence["sentence_embedding"] = str([x for x in embeddings[i]])
     # 集合名称
     collection_name = "SeqVector"
+    # 先把原来的删除
+    mg.del_data_db(collection_name, "fileName", fileName)
+    # 再添加新的分词
     mg.insert_data(collection_name, textData)
 
     # 集合名称
@@ -378,7 +417,9 @@ def remove_special_characters(strings):
     """
     处理掉列表中的特殊字符
     """
-    special_characters = "!@#$%^&*()_+{}[]|\:;'<>?,./\"，；。？！”“的了呢么吗"
+    special_characters = (
+        "!@#$%^&*()_+{}[]|\:;'<>?,./\"，：；。？！、”“的了呢么吗\n请问我你他是"
+    )
     return [
         string
         for string in strings
@@ -387,19 +428,23 @@ def remove_special_characters(strings):
 
 
 # 混合检索
-def RRF(order1, order2, order3):
+def RRF(order1, order2, order3, holdValue):
 
     # 获取数据
     collection_name = "SeqVector"
     allData = mg.fetch_vectors_from_db(collection_name)
 
-    Len = len(order1)
-    score = [0.0] * Len
+    Len1 = len(order1)
+    Len2 = len(order2)
+    Len3 = len(order3)
+    score = [0.0] * len(allData)
 
     # RRF算法直接重排
-    for i in range(0, Len):
+    for i in range(0, Len1):
         score[order1[i]["order"]] += 1.0 / (i + 1)
+    for i in range(0, Len2):
         score[order2[i]["order"]] += 1.0 / (i + 1)
+    for i in range(0, Len3):
         score[order3[i]["order"]] += 1.0 / (i + 1)
 
     sorted_rrf = np.array(score).argsort()[::-1]
@@ -416,21 +461,21 @@ def RRF(order1, order2, order3):
 
 
 # 重排
-def reOrder(questions):
+def reOrder(questions, quoutes):
     # 获取数据
-    collection_name = "SeqVector"
-    allData = mg.fetch_vectors_from_db(collection_name)
+    # collection_name = "SeqVector"
+    # allData = mg.fetch_vectors_from_db(collection_name)
 
     q = []
-    for i in allData:
+    for i in quoutes:
         q.append([questions, i["sentence"]])
     sorted_reScore = np.array(rerank.rerankerStore(q)).argsort()[::-1]
 
     most_similar_data = []
     for index in sorted_reScore:
-        vector_doc = allData[index]
+        vector_doc = quoutes[index]
         vector_doc["_id"] = str(vector_doc["_id"])
-        vector_doc["order"] = int(index)
+        # vector_doc["order"] = int(index)
         # vector_doc = mg.fetch_data_findone_db(collection_name,'index',int(index))
         most_similar_data.append(vector_doc)
 
@@ -444,7 +489,7 @@ def reOrder(questions):
 
 
 # 关键词检索
-def keyWord(questions):
+def keyWord(questions, holdValue):
     # 先把questions分割成几个关键词
     questionsList = remove_special_characters(jieba.lcut_for_search(questions))
     print("分词结果", questionsList)
@@ -463,6 +508,7 @@ def keyWord(questions):
 
     # 排序
     sorted_word = np.array(weight).argsort()[::-1]
+    sorted_word = sorted_word[: 10 * holdValue]
 
     most_similar_data = []
     for index in sorted_word:
@@ -476,7 +522,7 @@ def keyWord(questions):
 
 
 # 余弦相似度检索
-def wordVec(questions):
+def wordVec(questions, holdValue):
     queVec = sentence2Vec.embedding_generate(questions)
 
     collection_name = "SeqVector"
@@ -493,6 +539,7 @@ def wordVec(questions):
 
     # 排序
     sorted_indices = similarities.argsort()[::-1]
+    sorted_indices = sorted_indices[: 10 * holdValue]
     # most_similar = [(index, similarities[index]) for index in sorted_indices]
 
     most_similar_data = []
@@ -507,7 +554,7 @@ def wordVec(questions):
 
 
 # 欧氏距离
-def euDistance(questions):
+def euDistance(questions, holdValue):
     queVec = sentence2Vec.embedding_generate(questions)
 
     collection_name = "SeqVector"
@@ -526,6 +573,7 @@ def euDistance(questions):
 
     # 排序
     sorted_euclidean_distance = np.array(euclidean_distance).argsort()
+    sorted_euclidean_distance = sorted_euclidean_distance[: 10 * holdValue]
 
     most_similar_data = []
     for index in sorted_euclidean_distance:
@@ -540,47 +588,28 @@ def euDistance(questions):
 
 # 优化回答
 def reQuery(questions):
-    # client = ZhipuAI(
-    #     api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
-    # )  # 填写您自己的APIKey
-    # 优化提问
-    messages = []
     user_input = (
         "你是一名文件数据管理人员，需要对用户的问题重新表达\n下面是用户的问题，请对其进行重新表述："
         + questions
     )
-    # messages += [{"role": "user", "content": user_input}]
-
-    # response = client.chat.completions.create(
-    #     model="glm-4", messages=messages  # 填写需要调用的模型名称
-    # )
-    # response_message = response.choices[0].message.content
-    # print(response_message)
-    response_message = chatmodel(user_input)
+    try:
+        response_message = chatmodel(user_input)
+    except:
+        response_message = zhipuChat(user_input)
 
     return questions + "\n" + response_message
 
 
 # 预回答
 def preAnswer(questions):
-    # client = ZhipuAI(
-    #     api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
-    # )  # 填写您自己的APIKey
-    # 优化提问
-    messages = []
     user_input = (
         "你是一名文件数据管理人员，需要对用户的问题精准的回答\n下面是用户的问题，请回答："
         + questions
     )
-    # messages += [{"role": "user", "content": user_input}]
-
-    # response = client.chat.completions.create(
-    #     model="glm-4", messages=messages  # 填写需要调用的模型名称
-    # )
-    # response_message = response.choices[0].message.content
-    # print(response_message)
-
-    response_message = chatmodel(user_input)
+    try:
+        response_message = chatmodel(user_input)
+    except:
+        response_message = zhipuChat(user_input)
 
     return questions + "\n" + response_message
 
@@ -614,6 +643,9 @@ def saveHistory():
 
 @app.route("/getFileTextSeq", methods=["POST"])
 def getFileTextSeq():
+    """
+    获得分割后存储在数据库的数据
+    """
     fileName = request.json.get("fileName").split(".")[0]
     collection_name = "SeqVector"
     filiList = mg.fetch_data_find_db(collection_name, "fileName", fileName)
@@ -622,11 +654,22 @@ def getFileTextSeq():
 
 @app.route("/FileListDelOne", methods=["POST"])
 def FileListDelOne():
-    print(111)
+    """
+    删除文件
+    """
+    # 删除对应数据库数据
     fileName = request.json.get("fileName").split(".")[0]
-    collection_name = "fileList"
-    mg.del_data_db(collection_name, "fileName", fileName)
-    filiList = mg.fetch_alldata_db(collection_name)
+    collection_nameS = "SeqVector"
+    mg.del_data_db(collection_nameS, "fileName", fileName)
+    print("语句分割已删除")
+    collection_nameF = "fileList"
+    mg.del_data_db(collection_nameF, "fileName", fileName)
+    print("文件列表已删除")
+    # 添加删除本地文件
+    fileremove(fileName)
+
+    # 返回删除后的文件列表
+    filiList = mg.fetch_alldata_db(collection_nameF)
     return jsonify(filiList)
 
 
@@ -663,52 +706,52 @@ def QandA():
     outKnowledge = ""
     quoteList = []
     # 选择检索方法
-
-    if isReOrder:
-        print("重排")
-        most_similar_data = reOrder(questions)
-    elif isRRF:
+    if isRRF:
         print("混合检索")
         # 混合检索
         most_similar_data = RRF(
-            keyWord(questions), wordVec(questions), euDistance(questions)
+            keyWord(questions, searchWeight),
+            wordVec(questions, searchWeight),
+            euDistance(questions, searchWeight),
+            searchWeight,
         )
 
     elif searchWay == 0:
         print("关键词检索")
-        most_similar_data = keyWord(questions)
+        most_similar_data = keyWord(questions, searchWeight)
     elif searchWay == 1:
         print("余弦相似度检索")
-        most_similar_data = wordVec(questions)
+        most_similar_data = wordVec(questions, searchWeight)
     elif searchWay == 2:
         print("欧氏距离检索")
-        most_similar_data = euDistance(questions)
+        most_similar_data = euDistance(questions, searchWeight)
 
+    # 重排
+    if isReOrder:
+        print("重排")
+        quotes = most_similar_data[: 10 * searchWeight]
+        print("重排数组长度:", len(quotes))
+        most_similar_data = reOrder(questions, quotes)
+
+    # 资料引用
     quoteList = most_similar_data[:searchWeight]
     for q in quoteList:
         outKnowledge += q["sentence"]
 
-    messages = []
-    # 问答的参数
-    # client = ZhipuAI(
-    #     api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
-    # )  # 填写您自己的APIKey
-
+    # 问答准备
     prompts = (
         "你是一名文件数据管理人员，需要对用户的问题根据资料精准得回答，如果资料中得不出结论，就不要回答，下面是相关的资料：\n"
         + outKnowledge
     )
 
     user_input = prompts + "下面是用户的问题，请回答：" + original_query
-    # answers = ""
+    answers = ""
 
-    # messages += [{"role": "user", "content": user_input}]
-    # response = client.chat.completions.create(
-    #     model="glm-4", messages=messages  # 填写需要调用的模型名称
-    # )
-    # response_message = response.choices[0].message.content
-
-    response_message = chatmodel(user_input)
+    # 如果不能连上本地大模型就用zhipu模型
+    try:
+        response_message = chatmodel(user_input)
+    except:
+        response_message = zhipuChat(user_input)
     answers = str(response_message)
     # -----------------------------------------------------------
     return jsonify({"answers": answers, "quote": list(quoteList)})
@@ -720,3 +763,4 @@ def QandA():
 # 启动 Waitress 服务器
 if __name__ == "__main__":
     serve(app, host="0.0.0.0", port=3000, threads=threads_num)
+    # app.run(debug=True, port=3000)

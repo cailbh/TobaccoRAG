@@ -1,4 +1,4 @@
-const {defineConfig} = require('@vue/cli-service')
+const { defineConfig } = require('@vue/cli-service')
 module.exports = defineConfig({
   //close eslint 防止报错
   lintOnSave: false,
@@ -9,33 +9,34 @@ module.exports = defineConfig({
     'docx-preview',
   ],
   devServer: {
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      proxy: {
-          '/api': {
-              target: 'http://127.0.0.1:3000/',
-              // target: 'http://localhost:3000/',
-              changeOrigin: true,
-              pathRewrite: {
-                  '^/api': ''
-              },
-              onProxyReq: (proxyReq, req, res) => {
-                if (req.method === 'POST' && req.body) {
-                  const contentLength = Buffer.byteLength(req.body, 'utf-8');
-    
-                  proxyReq.setHeader('Content-Length', contentLength);
-                }}
-          }
-      },
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:3000/',
+        // target: 'http://localhost:3000/',
+        changeOrigin: true,
+        pathRewrite: {
+          '^/api': ''
+        },
+        onProxyReq: (proxyReq, req, res) => {
+          if (req.method === 'POST' && req.body) {
+            const contentLength = Buffer.byteLength(req.body, 'utf-8');
 
+            proxyReq.setHeader('Content-Length', contentLength);
+          }
+        }
+      }
+    },
+    webSocketServer: false
   },
   configureWebpack: (config) => {
-      config.module.rules.push({
-        test: /\.glsl$/,
-        use: [
-          {
-            loader: "webpack-glsl-loader",
-          },
-        ],
-      });
-    },
+    config.module.rules.push({
+      test: /\.glsl$/,
+      use: [
+        {
+          loader: "webpack-glsl-loader",
+        },
+      ],
+    });
+  },
 })

@@ -1,4 +1,4 @@
-.FileManagerPanel{
+.FileManagerPanel {
   width: 100%;
   height: 100%;
   /* position: fixed; */
@@ -7,9 +7,10 @@
     top: 0; */
 }
 
-.FileManagerPanelDiv{
+.FileManagerPanelDiv {
   height: calc(100% - 10px);
 }
+
 .chartTooltip {
   position: absolute;
   width: 200px;
@@ -24,28 +25,37 @@
   /* pointer-events: none; */
   display: none;
 }
-.chartTooltip.hidden {
-}
+
+.chartTooltip.hidden {}
+
 .chartTooltip p {
   margin: 0;
   font-size: 14px;
   text-align: left;
 }
-.tagClass{
+
+.tagClass {
   margin: 2px;
   color: white;
 }
+
 .el-table .choose-row {
   background: #f0f9eb;
 }
-.preDiv{
+
+.preDiv {
   width: 100%;
   height: 100%;
   background: blue;
 }
-.tagWrap{
+
+.tagWrap {
   width: 40%;
   height: 100%;
   background: white;
   float: left;
+}
+
+.el-table__body-wrapper {
+  height: 610px;
 }

@@ -69,17 +69,17 @@ export default {
                 },
                 {
                     content: ["混合检索", "是否重排"],
-                    checked: [],
-                    preChecked: [],
+                    checked: ["混合检索", "是否重排"],
+                    preChecked: ["混合检索", "是否重排"],
                 },
                 {
                     content: ["优化表述", "假设文档嵌入"],
-                    checked: [],
-                    preChecked: [],
+                    checked: ["假设文档嵌入"],
+                    preChecked: ["假设文档嵌入"],
                 }
             ],
-            weight: 3,
-            preWeight: 3
+            weight: 5,
+            preWeight: 5
         };
     },
     methods: {
@@ -107,7 +107,7 @@ export default {
     watch: {
         controlList: {
             handler(newval, oldval) {
-                this.weight = 3
+                this.weight = 5
             },
             deep: true,
             immediate: true

@@ -13,7 +13,8 @@
       </div>
 
       <div id="FileManagerPanelDiv" class="panelBody" ref="FileManagerPanelDiv">
-        <el-table max-height="800" v-show="tableShow" :data="tableData" style="width: 100%" :row-class-name="tableRowClassName">
+        <el-table max-height="800" v-show="tableShow" :data="tableData" style="width: 100%"
+          :row-class-name="tableRowClassName">
           <el-table-column label="序号" width="70">
             <template slot-scope="scope">
               <i class="el-icon-document"></i>
@@ -129,7 +130,7 @@ export default {
         })
         .then((response) => {
           console.log("FileListDelOne", response.body);
-          
+
           _this.fileData = response.body;
           // }
         });
