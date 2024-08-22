@@ -78,8 +78,8 @@ export default {
                     preChecked: ["假设文档嵌入"],
                 }
             ],
-            weight: 5,
-            preWeight: 5
+            weight: 10,
+            preWeight: 10
         };
     },
     methods: {
@@ -107,7 +107,7 @@ export default {
     watch: {
         controlList: {
             handler(newval, oldval) {
-                this.weight = 5
+                this.weight = 10
             },
             deep: true,
             immediate: true

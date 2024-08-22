@@ -156,7 +156,7 @@ def find_text_page_in_pdf(pdf_path, text):
             text_instances = page.search_for(w)
             if text_instances:
                 lenSearchWord += 1
-        if lenSearchWord / lenWords >= 0.5:
+        if lenSearchWord / lenWords >= 0.4:
             return page_num + 1  # 页码从 1 开始
 
     # 没找到返回1
@@ -352,79 +352,108 @@ def seq2vec():
     return jsonify(["success"])
 
 
-# def find_most_similar_vectors(vector_array, target_vector, top_n=5):
-#     """
-#     在向量数组中查找与目标向量最相似的前几个向量
-
-#     :param vector_array: np.ndarray, 向量数组，形状为 (num_vectors, vector_dim)
-#     :param target_vector: np.ndarray, 目标向量，形状为 (vector_dim,)
-#     :param top_n: int, 要查找的最相似向量的数量
-#     :return: list, 最相似向量的索引及其相似度
-#     """
-#     # 计算目标向量与向量数组中每个向量的余弦相似度
-#     similarities = cosine_similarity(
-#         vector_array, target_vector.reshape(1, -1)
-#     ).flatten()
-
-#     # 获取最相似的前 top_n 个向量的索引
-#     most_similar_indices = similarities.argsort()[-top_n:][::-1]
-
-#     # 返回最相似向量的索引及其相似度
-#     most_similar_vectors = [
-#         (index, similarities[index]) for index in most_similar_indices
-#     ]
-#     return most_similar_vectors
-
-
-# def find_similar_vectors(vector_array, target_vector, top_n, holdValue):
-#     """
-#     在向量数组中查找与目标向量最相似的前几个向量
-#     找到前n个其中前n个向量的相似度相加大于等于holdValue
-
-#     :param vector_array: np.ndarray, 向量数组，形状为 (num_vectors, vector_dim)
-#     :param target_vector: np.ndarray, 目标向量，形状为 (vector_dim,)
-#     :param top_n: int, 要查找的最相似向量的数量
-#     :return: list, 最相似向量的索引及其相似度
-#     """
-#     # 计算目标向量与向量数组中每个向量的余弦相似度
-#     similarities = cosine_similarity(
-#         vector_array, target_vector.reshape(1, -1)
-#     ).flatten()
-
-#     # 排序
-#     sorted_indices = similarities.argsort()
-
-#     # 阈值
-#     nowValue = 0.0
-#     nValue = 0
-
-#     while nowValue <= holdValue and nValue < top_n:
-#         nValue += 1
-#         nowValue += similarities[sorted_indices[-nValue]]
-
-#     # 获取最相似的前 top_n 个向量的索引
-#     most_similar_indices = sorted_indices[-nValue:][::-1]
-
-#     # 返回最相似向量的索引及其相似度
-#     most_similar_vectors = [
-#         (index, similarities[index]) for index in most_similar_indices
-#     ]
-#     print("most_similar_vectors:", most_similar_vectors)
-#     return most_similar_vectors
-
-
 def remove_special_characters(strings):
     """
     处理掉列表中的特殊字符
     """
     special_characters = (
-        "!@#$%^&*()_+{}[]|\:;'<>?,./\"，：；。？！、”“的了呢么吗\n请问我你他是"
+        "!@#$%^&*()_+{}[]|\:;'<>?,./\"，：；。？！、”“《》（）的了呢么吗\n请问我你他是 "
     )
     return [
         string
         for string in strings
         if not any(char in special_characters for char in string)
     ]
+
+
+"""
+回答索引匹配函数
+"""
+
+
+def ansSplit(ans):
+    ansArr = ans.split("\n")
+    # 将空的字符串去掉
+    ansArr = list(filter(None, ansArr))
+
+    # print("ansArr分割结果：", ansArr)
+    return ansArr
+
+
+def quoteMap(ans, quoteList):
+    # 向量化
+    ansVec = sentence2Vec.embedding_generate(ans)
+    vector_data = [ast.literal_eval(doc["sentence_embedding"]) for doc in quoteList]
+    vector_array = np.array(vector_data)
+
+    # 计算目标向量与向量数组中每个向量的余弦相似度
+    similarities = cosine_similarity(vector_array, ansVec.reshape(1, -1)).flatten()
+
+    # 排序
+    sorted_vec = similarities.argsort()[::-1]
+
+    # 再加一个关键词处理
+    keyWordList = remove_special_characters(jieba.lcut_for_search(ans))
+    weight = [0] * len(quoteList)
+
+    # 然后在各个部分查找这些词语
+    for q in keyWordList:
+        for i in range(len(quoteList)):
+            if q in quoteList[i]["sentence"]:
+                weight[i] += 1
+    sorted_word = np.array(weight).argsort()[::-1]
+
+    # 利用RRF重排
+    rrf = [0] * len(quoteList)
+    for i in range(0, len(quoteList)):
+        rrf[sorted_vec[i]] += 1.0 / (i + 1)
+        rrf[sorted_word[i]] += 1.0 / (i + 1)
+
+    sorted_rrf = np.array(rrf).argsort()[::-1]
+
+    # 如果相似度低于一定值，则说明没什么索引或索引比例比较小
+    if (
+        similarities[sorted_rrf[0]] < 0.6
+        or weight[sorted_rrf[0]] / len(keyWordList) < 0.5
+    ):
+        return -1
+    else:
+        print("相似度", similarities[sorted_rrf[0]])
+        print("关键字", weight[sorted_rrf[0]])
+        return sorted_vec[0]
+
+
+def quotesMap(ansArr, quoteList):
+    """
+    将ansArr数组与quoteList数组对应起来
+    """
+    textWithQuote = []
+    newQuoteList = []
+    # 索引数组
+    indexList = []
+    index = 0
+    nowNum = index
+
+    for i in range(0, len(ansArr)):
+        # 找到与ans最匹配的quote
+        quoteNum = quoteMap(ansArr[i], quoteList)
+        print("quoteNum:", quoteNum)
+        # 如果是第一次出现的quoteNum
+        if quoteNum not in indexList:
+            indexList.append(quoteNum)
+            nowNum = index
+            index += 1
+            newQuoteList.append(quoteList[int(quoteNum)])
+        else:
+            nowNum = indexList.index(quoteNum)
+
+        textWithQuote.append({"text": str(ansArr[i]), "quote": nowNum})
+    return (newQuoteList, textWithQuote)
+
+
+"""
+检索方法函数
+"""
 
 
 # 混合检索
@@ -480,12 +509,6 @@ def reOrder(questions, quoutes):
         most_similar_data.append(vector_doc)
 
     return most_similar_data
-
-
-"""
-
-检索方法函数
-"""
 
 
 # 关键词检索
@@ -596,6 +619,7 @@ def reQuery(questions):
         response_message = chatmodel(user_input)
     except:
         response_message = zhipuChat(user_input)
+        # response_message = "err"
 
     return questions + "\n" + response_message
 
@@ -610,6 +634,7 @@ def preAnswer(questions):
         response_message = chatmodel(user_input)
     except:
         response_message = zhipuChat(user_input)
+        # response_message = "err"
 
     return questions + "\n" + response_message
 
@@ -752,9 +777,22 @@ def QandA():
         response_message = chatmodel(user_input)
     except:
         response_message = zhipuChat(user_input)
+        # response_message = "err"
+
     answers = str(response_message)
+
+    # 对回答进行处理
+    ansArr = ansSplit(answers)
+    print("ansArr：", ansArr)
+    (newQuoteList, textWithQuote) = quotesMap(ansArr, quoteList)
     # -----------------------------------------------------------
-    return jsonify({"answers": answers, "quote": list(quoteList)})
+    return jsonify(
+        {
+            "answers": answers,
+            "quote": list(newQuoteList),
+            "textWithQuote": list(textWithQuote),
+        }
+    )
 
 
 # if __name__ == "__main__":
@@ -762,5 +800,5 @@ def QandA():
 
 # 启动 Waitress 服务器
 if __name__ == "__main__":
-    serve(app, host="0.0.0.0", port=3000, threads=threads_num)
-    # app.run(debug=True, port=3000)
+    # serve(app, host="0.0.0.0", port=3000, threads=threads_num)
+    app.run(debug=True, port=3000)

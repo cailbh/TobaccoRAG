@@ -5,7 +5,7 @@
             <Auxiliary></Auxiliary>
         </div>
         <div class="message-container" id="chat-message-container">
-            <div v-for="message in messages" :key="message.id" class="message">
+            <div v-for="message in    messages   " :key="message.id" class="message">
                 <div v-if="message.isMe" class="isMe">
                     <div class="chatHead">
                         <div class="userIcon"></div>
@@ -31,15 +31,37 @@
                             <span><el-avatar icon="el-icon-user-solid"></el-avatar>GPT</span>
                             <el-button style="float: right; padding: 3px 0" type="text"></el-button>
                         </div> -->
-                        <div class="chatText" v-html="message.text"></div>
-                        <el-button v-for="(item, index) in message.quote" :key="index" type="text"
-                            @click="quoteClk(item)">{{ (index + 1) }}</el-button>
+                        <!-- <div class="chatText" v-html="message.text"> -->
+                        <div class="chatText">
+                            <div v-for="(sentence, index) in  message.textWithQuote " @mouseover="quoteOver($event)"
+                                @mouseout="quoteOut($event)" @click="quoteClk((message.quote[sentence.quote]))"
+                                v-html="rawToMarked(sentence.text + ((sentence.quote == -1) ? '' : quoteHTML(index + 1, sentence.quote + 1)))"
+                                class="chatTextLine">
+                            </div>
+                            <!-- <div v-html="rawToMarked(sentence.text)"></div> -->
+                        </div>
+                        <!-- <el-button v-for="( item, index ) in  message.quote " :key="index" type="text"
+                            @click="quoteClk(item)">
+                            {{ (index + 1) }}
+                        </el-button> -->
+                        <el-dropdown trigger="click" :hide-on-click="false" v-if="message.quote.length != 0">
+                            <el-button type="primary" class="quoteBTN">
+                                本次共检索{{ message.quote.length }}个文本块
+                            </el-button>
+                            <el-dropdown-menu slot="dropdown">
+                                <el-dropdown-item v-for="(item, index) in message.quote" class="quote_item">
+                                    <p @click="quoteClk(item)">
+                                        {{ index + 1 }}. 《{{ item.fileName }}》 {{ item.sentence }}
+                                    </p>
+                                </el-dropdown-item>
+                            </el-dropdown-menu>
+                        </el-dropdown>
                     </el-card>
                 </div>
             </div>
         </div>
-        <!-- 输入消息的表单 -->
-        <div class="input-form">
+        <!--输入消息的表单 -->
+        <div class=" input-form">
             <searchControl @searchChange="searchChange"></searchControl>
 
             <el-input type="textarea" :autosize="{ minRows: 4, maxRows: 4 }" placeholder="请输入内容" v-model="inputText">
@@ -64,18 +86,31 @@ export default {
         return {
             inputText: '',
             messages: [
-                { id: 1, text: '你好,我有什么可以帮助你的吗？', isMe: false, quote: [] },
+                {
+                    id: 1,
+                    text: '你好,我有什么可以帮助你的吗？', //marked语法编译过的text
+                    isMe: false,
+                    quote: [],
+                    rawText: "你好,我有什么可以帮助你的吗？",
+                    textWithQuote: [
+                        {
+                            text: "你好,我有什么可以帮助你的吗？",
+                            quote: -1 //-1为无索引，其余对对应下标
+                        }
+                    ]
+                },
             ],
             searchWay: 1,
             reAsk: false,
-            preAns: false,
+            preAns: true,
             isRRF: true,
-            isReOrder: false,
-            searchWeight: 5
+            isReOrder: true,
+            searchWeight: 10,
         };
     },
     watch: {
         messages(val) {
+            console.log("new message hist", val)
             this.saveHistory()
         },
     },
@@ -90,6 +125,7 @@ export default {
     },
     methods: {
         quoteClk(val) {
+            console.log("quoteClk")
             this.$bus.$emit("quote", val);
         },
         getHistory() {
@@ -127,11 +163,18 @@ export default {
             const _this = this;
             if (this.inputText.trim()) {
                 let questions = _this.inputText;
-                this.messages.push({ id: Date.now(), text: this.inputText, isMe: true });
+                // 将我的消息加入hist
+                this.messages.push({
+                    id: Date.now(),
+                    text: this.inputText,
+                    isMe: true
+                });
+
                 this.inputText = '';
                 setTimeout(() => {
                     _this.scrollToBottom();
                 }, 1000);
+                console.log("reAsk", this.reAsk, "preAns", this.preAns)
                 this.$http
                     .post("/api/QA", {
                         questions: questions,
@@ -151,10 +194,18 @@ export default {
                         let data = res.body;
                         let ans = data['answers'];
                         let quote = data['quote'];
+                        let textWithQuote = data['textWithQuote'];
                         console.log("quote", quote);
                         let markedText = marked(ans)
                         // console.log(markedText)
-                        this.messages.push({ id: Date.now(), text: markedText, isMe: false, quote: quote });
+                        this.messages.push({
+                            id: Date.now(),
+                            text: markedText,
+                            isMe: false,
+                            quote: quote,
+                            rawText: ans,
+                            textWithQuote: textWithQuote
+                        });
                         setTimeout(() => {
                             _this.scrollToBottom();
                         }, 1000);
@@ -197,12 +248,12 @@ export default {
             }
             else {
                 if (val[2].checked[0] == "假设文档嵌入") {
-                    this.reAsk = true
-                    this.preAns = false
-                }
-                else {
                     this.reAsk = false
                     this.preAns = true
+                }
+                else {
+                    this.reAsk = true
+                    this.preAns = false
                 }
             }
 
@@ -221,6 +272,20 @@ export default {
                 chat_message_container.scrollTop = chat_message_container.scrollHeight;
                 console.log(chat_message_container.scrollTop, chat_message_container.scrollHeight)
             }
+        },
+        rawToMarked(raw) {
+            return marked(raw)
+        },
+        quoteHTML(index, quote) {
+            return `<span class='quoteNum'> ${quote} </span>`
+        },
+        quoteOver(event) {
+            let nowElem = event.currentTarget.firstElementChild
+            nowElem.setAttribute("id", "underline")
+        },
+        quoteOut(event) {
+            let nowElem = event.currentTarget.firstElementChild
+            nowElem.setAttribute("id", "")
         }
     },
 };
@@ -371,5 +436,85 @@ export default {
 
 .mine {
     background-color: lightblue;
+}
+</style>
+<style>
+.quoteBTN {
+    background-color: #f3f5fc;
+    color: #000;
+    border: 0;
+}
+
+.quoteBTN:hover {
+    background-color: #eef0f6;
+    color: #000;
+}
+
+.quoteBTN:focus {
+    background-color: #eef0f6;
+    color: #000;
+}
+
+.quote_item p {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    word-break: break-all;
+    white-space: nowrap;
+    width: 20vw;
+    margin: 0;
+}
+
+.quoteNum {
+    /* position: absolute; */
+    /* right: 0; */
+    position: relative;
+    background-color: #e5e7ed;
+    width: 14px;
+    height: 14px;
+    text-align: center;
+    line-height: 14px;
+
+    display: inline-block;
+
+    font-size: 10px;
+    color: #5e6772;
+    /* margin: auto; */
+    margin-left: 0;
+
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.quoteNum:hover {
+    background-color: #2E67FA;
+    color: #fff;
+}
+
+.chatText * {
+    max-width: 100%;
+}
+
+.chatText li {
+    /* display: inline-block; */
+    /* flex-wrap: wrap; */
+    text-wrap: wrap;
+    /* white-space: nowrap; */
+    /* display: list-item; */
+    /* list-style: circle; */
+}
+
+.chatText ul {
+    margin: 0;
+}
+
+.chatTextLine {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    line-height: 34px;
+}
+
+#underline {
+    text-decoration: underline dotted;
 }
 </style>
