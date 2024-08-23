@@ -1,6 +1,6 @@
 <!-- eslint-disable no-unused-vars -->
 <template>
-  <div v-show="AuxiliaryShow" class="AuxiliaryPanel" ref="AuxiliaryPanel">
+  <div v-show="AuxiliaryShow" class="AuxiliaryPanel" ref="AuxiliaryPanel" style="z-index: 2;">
     <div id="AuxiliaryHead" @mousedown="startDrag">
       <el-button class="tagBut" type="danger" size="mini" icon="el-icon-close" circle @click="close"></el-button>
     </div>
@@ -184,7 +184,11 @@ export default {
       if (this.isDragging) {
         const deltaX = event.screenX - this.initialMouseX;
         const deltaY = event.screenY - this.initialMouseY;
-        this.$refs.AuxiliaryPanel.style.transform = `translate(${this.initialLeft + deltaX}px, ${this.initialTop + deltaY}px)`;
+
+        const newx = this.initialLeft + deltaX
+        const newy = this.initialTop + deltaY
+        this.$refs.AuxiliaryPanel.style.transform =
+          `translate(${newx < 0 ? 0 : newx}px,${newy < 0 ? 0 : newy}px)`;
       } else if (this.isResizing) {
         this.resizeComponent(event);
       }

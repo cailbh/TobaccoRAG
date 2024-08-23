@@ -175,6 +175,7 @@ def find_text_in_pdf(pdf_path, page_num, text):
     page = document.load_page(page_num - 1)
     words = re.split(r"(?<=[  ，。。、.?!\n])", text)
     listW = myTools.remove_newline_items(words)
+    print("listW", listW)
 
     res = []
     for w in listW:
@@ -381,46 +382,51 @@ def ansSplit(ans):
 
 
 def quoteMap(ans, quoteList):
-    # 向量化
-    ansVec = sentence2Vec.embedding_generate(ans)
-    vector_data = [ast.literal_eval(doc["sentence_embedding"]) for doc in quoteList]
-    vector_array = np.array(vector_data)
+    # # 向量化
+    # ansVec = sentence2Vec.embedding_generate(ans)
+    # vector_data = [ast.literal_eval(doc["sentence_embedding"]) for doc in quoteList]
+    # vector_array = np.array(vector_data)
 
-    # 计算目标向量与向量数组中每个向量的余弦相似度
-    similarities = cosine_similarity(vector_array, ansVec.reshape(1, -1)).flatten()
+    # # 计算目标向量与向量数组中每个向量的余弦相似度
+    # similarities = cosine_similarity(vector_array, ansVec.reshape(1, -1)).flatten()
 
-    # 排序
-    sorted_vec = similarities.argsort()[::-1]
+    # # 排序
+    # sorted_vec = similarities.argsort()[::-1]
 
-    # 再加一个关键词处理
-    keyWordList = remove_special_characters(jieba.lcut_for_search(ans))
-    weight = [0] * len(quoteList)
+    # # 再加一个关键词处理
+    # keyWordList = remove_special_characters(jieba.lcut_for_search(ans))
+    # weight = [0] * len(quoteList)
 
-    # 然后在各个部分查找这些词语
-    for q in keyWordList:
-        for i in range(len(quoteList)):
-            if q in quoteList[i]["sentence"]:
-                weight[i] += 1
-    sorted_word = np.array(weight).argsort()[::-1]
+    # # 然后在各个部分查找这些词语
+    # for q in keyWordList:
+    #     for i in range(len(quoteList)):
+    #         if q in quoteList[i]["sentence"]:
+    #             weight[i] += 1
+    # sorted_word = np.array(weight).argsort()[::-1]
 
-    # 利用RRF重排
-    rrf = [0] * len(quoteList)
-    for i in range(0, len(quoteList)):
-        rrf[sorted_vec[i]] += 1.0 / (i + 1)
-        rrf[sorted_word[i]] += 1.0 / (i + 1)
+    # # 利用RRF重排
+    # rrf = [0] * len(quoteList)
+    # for i in range(0, len(quoteList)):
+    #     rrf[sorted_vec[i]] += 1.0 / (i + 1)
+    #     rrf[sorted_word[i]] += 1.0 / (i + 1)
 
-    sorted_rrf = np.array(rrf).argsort()[::-1]
+    # sorted_rrf = np.array(rrf).argsort()[::-1]
+
+    q = []
+    for i in quoteList:
+        q.append([ans, i["sentence"]])
+    sorted_reScore = np.array(rerank.rerankerStore(q)).argsort()[::-1]
 
     # 如果相似度低于一定值，则说明没什么索引或索引比例比较小
-    if (
-        similarities[sorted_rrf[0]] < 0.6
-        or weight[sorted_rrf[0]] / len(keyWordList) < 0.5
-    ):
-        return -1
-    else:
-        print("相似度", similarities[sorted_rrf[0]])
-        print("关键字", weight[sorted_rrf[0]])
-        return sorted_vec[0]
+    # if (
+    # similarities[sorted_rrf[0]] < 0.6
+    # or weight[sorted_rrf[0]] / len(keyWordList) < 0.5
+    # ):
+    # return -1
+    # else:
+    # print("相似度", similarities[sorted_rrf[0]])
+    # print("关键字", weight[sorted_rrf[0]])
+    return sorted_reScore[0]
 
 
 def quotesMap(ansArr, quoteList):
@@ -618,8 +624,8 @@ def reQuery(questions):
     try:
         response_message = chatmodel(user_input)
     except:
-        response_message = zhipuChat(user_input)
-        # response_message = "err"
+        # response_message = zhipuChat(user_input)
+        response_message = "err"
 
     return questions + "\n" + response_message
 
@@ -633,8 +639,8 @@ def preAnswer(questions):
     try:
         response_message = chatmodel(user_input)
     except:
-        response_message = zhipuChat(user_input)
-        # response_message = "err"
+        # response_message = zhipuChat(user_input)
+        response_message = "err"
 
     return questions + "\n" + response_message
 
@@ -776,15 +782,21 @@ def QandA():
     try:
         response_message = chatmodel(user_input)
     except:
-        response_message = zhipuChat(user_input)
-        # response_message = "err"
+        # response_message = zhipuChat(user_input)
+        response_message = "err"
 
     answers = str(response_message)
 
     # 对回答进行处理
     ansArr = ansSplit(answers)
     print("ansArr：", ansArr)
+    time_start = time.time()  # 开始计时
+
     (newQuoteList, textWithQuote) = quotesMap(ansArr, quoteList)
+
+    time_end = time.time()  # 结束计时
+    time_c = time_end - time_start  # 运行所花时间
+    print("index cost", time_c, "s")
     # -----------------------------------------------------------
     return jsonify(
         {
