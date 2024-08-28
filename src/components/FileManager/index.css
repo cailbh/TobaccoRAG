@@ -11,6 +11,12 @@
   height: calc(100% - 10px);
 }
 
+.FileManagerPanelDiv .el-card__body {
+  padding-top: 0;
+  padding-bottom: 0;
+  height: calc(100% - 95px);
+}
+
 .chartTooltip {
   position: absolute;
   width: 200px;
@@ -57,5 +63,19 @@
 }
 
 .el-table__body-wrapper {
-  height: 610px;
+  /* height: 610px; */
+  height: auto;
+}
+
+/* .el-table--border th.gutter:last-of-type {
+  display: block !important;
+  width: 17px !important;
+} */
+
+.el-table::before {
+  height: 0;
+}
+
+.el-table__fixed-right {
+  overflow: visible;
 }

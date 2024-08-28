@@ -1,6 +1,7 @@
 .DS_Store
 node_modules
 /dist
+/.history
 
 
 # local env files
@@ -23,3 +24,6 @@ pnpm-debug.log*
 *.sw?
 /src/serve/py/bge-large-zh-v1.5
 /src/serve/py/__pycache__
+/src/serve/py/dist
+/src/serve/py/build
+/src/serve/py/index.spec

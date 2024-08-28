@@ -153,13 +153,15 @@
 .toolsDiv {
   float: left;
   width: 60%;
-  height: 30%;
+  max-height: 30%;
 }
 
 .fileTxt {
   float: left;
   width: 60%;
-  height: 70%;
+  /* height: 70%; */
+  max-height: calc(100% - 185px);
+  min-height: 70%;
   overflow: auto;
 }
 
@@ -175,7 +177,7 @@
   line-height: 150%;
 }
 
-.filePre-card {
+.toolsDiv .filePre-card {
   margin: 2px;
   height: calc(100% - 10px);
   width: calc(100% - 10px);
@@ -186,6 +188,10 @@
   overflow: scroll;
   height: calc(100% - 10px);
   width: calc(100% - 10px);
+}
+
+.filepretitle .el-card__body {
+  display: none;
 }
 
 .tools-card {

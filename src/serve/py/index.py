@@ -29,38 +29,19 @@ from waitress import serve
 
 file_path = "D:\data\\"
 llm_url = "http://192.168.3.118:5000/ChatQA"
-threads_num = 20
+threads_num = 16
+isWaitress = False
 # 读取json文件
 with open("./config.json", "r") as f:
     data = json.load(f)
     file_path = data["file_path"]
     llm_url = data["llm_url"]
     threads_num = data["threads_num"]
+    isWaitress = data["isWaitress"]
 
 
 # 模型问答
-# 智谱模型
-def zhipuChat(input):
-    print("智谱called")
-    client = ZhipuAI(
-        api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
-    )  # 填写您自己的APIKey
-
-    messages = []
-    messages += [{"role": "user", "content": input}]
-    response = client.chat.completions.create(
-        model="glm-4", messages=messages  # 填写需要调用的模型名称
-    )
-    return response.choices[0].message.content
-
-
-def chatmodel(query):
-    print("llm called")
-    url = llm_url
-    datas = {"questions": query}
-    datas = json.dumps(datas)
-    head = {"Content-Type": "application/json"}
-    return requests.post(url, data=datas, headers=head).json()["answers"]
+import llmQA as llmqa
 
 
 # 文件类型转化
@@ -299,23 +280,30 @@ def file_upload():
 # 分割
 @app.route("/wordToSeq", methods=["POST"])
 def word2seq():
+    # 文件名
     file = request.json.get("file").split(".")[0] + ".docx"
+    # 相邻两个chunk之间的重叠token数量
     overlap = request.json.get("overlap")
+    # 最大分割长度
     chunkSize = request.json.get("chunkSize")
+    # 分割的方法 0为递归 1为格式
     SplitType = request.json.get("SplitType")
+
+    # 读取文件文字内容
     path = file_path + file
     word = myTools.read_word_file(path)
     # single_sentences_list = remove_newline_items(re.split(r'(?<=[。.?!\n\n])\s+', word))
 
     # sentences = [{'sentence': x, 'index': i} for i, x in enumerate(single_sentences_list)]
     # sentences = getSeq.RCSplit(word, chunkSize, overlap)
-    sentence = []
+    sentences = []
+    treeData = {}
     print(SplitType)
     if SplitType == 0:
         sentences = getSeq.RCSplit(word, chunkSize, overlap)
     else:
-        sentences = getSeq.split_documentByOriChunk(word)
-    return jsonify(sentences)
+        (sentences, treeData) = getSeq.split_documentByOriChunk(file, word)
+    return jsonify({"sentences": sentences, "treeData": treeData})
 
 
 @app.route("/chunkWordToSeq", methods=["POST"])
@@ -382,50 +370,11 @@ def ansSplit(ans):
 
 
 def quoteMap(ans, quoteList):
-    # # 向量化
-    # ansVec = sentence2Vec.embedding_generate(ans)
-    # vector_data = [ast.literal_eval(doc["sentence_embedding"]) for doc in quoteList]
-    # vector_array = np.array(vector_data)
-
-    # # 计算目标向量与向量数组中每个向量的余弦相似度
-    # similarities = cosine_similarity(vector_array, ansVec.reshape(1, -1)).flatten()
-
-    # # 排序
-    # sorted_vec = similarities.argsort()[::-1]
-
-    # # 再加一个关键词处理
-    # keyWordList = remove_special_characters(jieba.lcut_for_search(ans))
-    # weight = [0] * len(quoteList)
-
-    # # 然后在各个部分查找这些词语
-    # for q in keyWordList:
-    #     for i in range(len(quoteList)):
-    #         if q in quoteList[i]["sentence"]:
-    #             weight[i] += 1
-    # sorted_word = np.array(weight).argsort()[::-1]
-
-    # # 利用RRF重排
-    # rrf = [0] * len(quoteList)
-    # for i in range(0, len(quoteList)):
-    #     rrf[sorted_vec[i]] += 1.0 / (i + 1)
-    #     rrf[sorted_word[i]] += 1.0 / (i + 1)
-
-    # sorted_rrf = np.array(rrf).argsort()[::-1]
-
     q = []
     for i in quoteList:
         q.append([ans, i["sentence"]])
     sorted_reScore = np.array(rerank.rerankerStore(q)).argsort()[::-1]
 
-    # 如果相似度低于一定值，则说明没什么索引或索引比例比较小
-    # if (
-    # similarities[sorted_rrf[0]] < 0.6
-    # or weight[sorted_rrf[0]] / len(keyWordList) < 0.5
-    # ):
-    # return -1
-    # else:
-    # print("相似度", similarities[sorted_rrf[0]])
-    # print("关键字", weight[sorted_rrf[0]])
     return sorted_reScore[0]
 
 
@@ -622,11 +571,12 @@ def reQuery(questions):
         + questions
     )
     try:
-        response_message = chatmodel(user_input)
+        response_message = llmqa.chatmodel(user_input)
     except:
-        # response_message = zhipuChat(user_input)
+        # response_message = llmqa.zhipuChat(user_input)
         response_message = "err"
 
+    # print("优化回答", response_message)
     return questions + "\n" + response_message
 
 
@@ -637,11 +587,11 @@ def preAnswer(questions):
         + questions
     )
     try:
-        response_message = chatmodel(user_input)
+        response_message = llmqa.chatmodel(user_input)
     except:
-        # response_message = zhipuChat(user_input)
+        # response_message = llmqa.zhipuChat(user_input)
         response_message = "err"
-
+    # print("预回答：", response_message)
     return questions + "\n" + response_message
 
 
@@ -778,11 +728,14 @@ def QandA():
     user_input = prompts + "下面是用户的问题，请回答：" + original_query
     answers = ""
 
+    print("问题长度：", len(user_input))
+
     # 如果不能连上本地大模型就用zhipu模型
     try:
-        response_message = chatmodel(user_input)
+        response_message = llmqa.chatmodel(user_input)
     except:
-        # response_message = zhipuChat(user_input)
+        print("大模型出错")
+        # response_message = llmqa.zhipuChat(user_input)
         response_message = "err"
 
     answers = str(response_message)
@@ -812,5 +765,9 @@ def QandA():
 
 # 启动 Waitress 服务器
 if __name__ == "__main__":
-    # serve(app, host="0.0.0.0", port=3000, threads=threads_num)
-    app.run(debug=True, port=3000)
+    if isWaitress:
+        print("Waitress")
+        serve(app, host="0.0.0.0", port=3000, threads=threads_num)
+    else:
+        print("flask")
+        app.run(debug=True, port=3000)

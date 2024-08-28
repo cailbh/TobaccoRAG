@@ -5,7 +5,7 @@
             <Auxiliary></Auxiliary>
         </div>
         <div class="message-container" id="chat-message-container">
-            <div v-for="message in    messages   " :key="message.id" class="message">
+            <div v-for="message in messages" :key="message.id" class="message">
                 <div v-if="message.isMe" class="isMe">
                     <div class="chatHead">
                         <div class="userIcon"></div>
@@ -46,7 +46,7 @@
                         </el-button> -->
                         <el-dropdown trigger="click" :hide-on-click="false" v-if="message.quote.length != 0">
                             <el-button type="primary" class="quoteBTN">
-                                本次共检索{{ message.quote.length }}个文本块
+                                本次共检索到了{{ message.quote.length }}个文本块
                             </el-button>
                             <el-dropdown-menu slot="dropdown">
                                 <el-dropdown-item v-for="(item, index) in message.quote" class="quote_item">
@@ -62,7 +62,8 @@
         </div>
         <!--输入消息的表单 -->
         <div class=" input-form">
-            <searchControl @searchChange="searchChange"></searchControl>
+            <searchControl @searchChange="searchChange">
+            </searchControl>
 
             <el-input type="textarea" :autosize="{ minRows: 4, maxRows: 4 }" placeholder="请输入内容" v-model="inputText">
             </el-input>
@@ -105,7 +106,7 @@ export default {
             preAns: true,
             isRRF: true,
             isReOrder: true,
-            searchWeight: 10,
+            searchWeight: 10
         };
     },
     watch: {
@@ -169,6 +170,13 @@ export default {
                     text: this.inputText,
                     isMe: true
                 });
+                
+                const loading = this.$loading({
+                    lock: true,
+                    text: '大模型正在回答您的问题',
+                    spinner: 'el-icon-loading',
+                    background: 'rgba(0, 0, 0, 0.7)'
+                });
 
                 this.inputText = '';
                 setTimeout(() => {
@@ -206,6 +214,9 @@ export default {
                             rawText: ans,
                             textWithQuote: textWithQuote
                         });
+
+                        loading.close();
+
                         setTimeout(() => {
                             _this.scrollToBottom();
                         }, 1000);
@@ -377,7 +388,7 @@ export default {
     margin: 0 auto;
     overflow: hidden;
     overflow-y: scroll;
-    height: calc(100% - 80px);
+    height: calc(100% - 90px);
     scrollbar-width: none;
     background-image: url('~@/assets/imgs/chatBack.png');
     background-size: cover;

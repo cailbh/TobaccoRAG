@@ -15,7 +15,7 @@
     <div id="FilePreSeqBody">
       <div class="filePre">
 
-        <el-card class="filePre-card filePreC" style="position: absolute; z-index: 2;">
+        <el-card class="filePre-card filePreC filepretitle" style="position: absolute; z-index: 2;">
           <div slot="header" class="clearfix">
             <span class="h1Txt">文件预览</span>
             <span>&nbsp;</span>
@@ -108,11 +108,8 @@
       <div class="fileTxt" ref="fileTest">
         <div class="fileTxtBody">
           <el-card v-for="item in textData" :key="item.index" class="box-card">
-            <!-- <el-input type="textarea" autosize placeholder="" v-model="item.sentence">
-            </el-input> -->
             <div slot="header" class="clearfix">
               <el-tag type="info">{{ `#chunk ${item.index + 1}` }}</el-tag>
-              <!-- <span class="h1Txt">{{ item.index }}</span> -->
               <el-button class="chunkButs" size="small" type="primary" plain
                 @click="deleteText(item.index)">删除</el-button>
 
@@ -133,17 +130,7 @@
                 <el-button class="chunkButs1" size="small" type="primary" plain @click="merageDownText(item.index)"
                   icon="el-icon-caret-bottom"></el-button>
               </div>
-
             </div>
-            <!-- <p class="formatted-text1" @mouseup="handleSelection">
-              {{ item.prevOverlap }}
-            </p>
-            <p class="formatted-text" @click="editText" @mouseup="handleSelection">
-              {{ item.nonOverlap }}
-            </p>
-            <p class="formatted-text1" @mouseup="handleSelection">
-              {{ item.nextOverlap }}
-            </p> -->
             <p class="formatted-text1" v-if="editingIndex != item.index"
               @contextmenu.prevent="showContextMenu($event, item.index)" @click="pClk()" @mouseup="handleSelection">
               {{ item.prevOverlap }}
@@ -159,11 +146,9 @@
             <el-input v-else ref="input" @blur="saveText" type="textarea" autosize placeholder=""
               v-model="item.sentence">
             </el-input>
-            <!-- <div :key="o" class="text item">
-              {{ item.sentence }}
-            </div> -->
           </el-card>
         </div>
+        <!-- <treeMap :treeData="tree_data" ref="treecontainer"></treeMap> -->
       </div>
     </div>
   </div>
@@ -174,11 +159,12 @@ import * as d3 from 'd3';
 import axios from "axios";
 import * as PDFJS from "pdfjs-dist/legacy/build/pdf";  // 引入PDFJS 
 import pdfjsWorker from "pdfjs-dist/legacy/build/pdf.worker.entry.js"; // 引入workerSrc的地址
+import treeMap from '../treeMap/index.vue'
 PDFJS.GlobalWorkerOptions.workerSrc = pdfjsWorker; //设置PDFJS.GlobalWorkerOptions.workerSrc的地址
 const docx = require("docx-preview");
 export default {
   props: ["curFileName"],
-  components: {},
+  components: { treeMap },
   data() {
     return {
       dgShow: true,
@@ -195,6 +181,7 @@ export default {
       fileName: '',
       rate: 1,
       textData: [],
+      tree_data: {},
       chunkSize: 300,
       overlap: 50,
       selectedText: '',
@@ -371,6 +358,7 @@ export default {
       return overlap;
     },
     processTexts(texts) {
+      // tests是分割后的数组[{index: int,sentence: str}]
       if (texts.length === 0) return [];
 
       const result = [];
@@ -380,9 +368,12 @@ export default {
         const currentText = texts[i]['sentence'];
         const nextText = i < texts.length - 1 ? texts[i + 1]['sentence'] : '';
 
+        // 与上一条文本块的重叠部分
         const prevOverlap = this.findOverlap(prevText, currentText);
+        // 与下一条文本块的重叠部分
         const nextOverlap = this.findOverlap(currentText, nextText);
 
+        // 没有重叠的部分
         const nonOverlap = currentText.slice(prevOverlap.length, currentText.length - nextOverlap.length);
 
         textNum += nonOverlap.length;
@@ -418,8 +409,12 @@ export default {
           }
         })
         .then((res) => {
-          let seqData = res.body
+          console.log(res)
+          let seqData = res.body.sentences
           _this.updataChunk(seqData);
+
+          // this.$refs.treecontainer.treeDataUpdate(_this.tree_data, res.body.treeData)
+          _this.tree_data = res.body.treeData
           // _this.$message({
           //   message: '文本分割完成',
           //   type: 'success'

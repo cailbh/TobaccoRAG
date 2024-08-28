@@ -115,6 +115,13 @@ export default {
       const file = event.target.files[0];
       let fileName = file.name;
 
+      const loading = this.$loading({
+        lock: true,
+        text: '正在上传文件',
+        spinner: 'el-icon-loading',
+        background: 'rgba(0, 0, 0, 0.7)'
+      });
+
       // 保存文件
       let formData = new FormData();
       formData.append('file', file)
@@ -129,6 +136,8 @@ export default {
         });
 
       this.$bus.$emit("curFileName", fileName);
+
+      loading.close();
     },
     handleOpen(key, keyPath) {
       const _this = this;

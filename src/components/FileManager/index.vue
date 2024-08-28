@@ -3,9 +3,9 @@
 
 <template>
   <div class="FileManagerPanel">
-    <el-card class="FileManagerPanelDiv">
+    <el-card class="FileManagerPanelDiv" style="position: relative;">
 
-      <div slot="header" class="clearfix">
+      <div slot="header" class="clearfix" style="height: 40px;">
         <div class="panelHead">
           <i class="el-icon-s-shop"></i>
           知识库
@@ -13,9 +13,10 @@
       </div>
 
       <div id="FileManagerPanelDiv" class="panelBody" ref="FileManagerPanelDiv">
-        <el-table max-height="800" v-show="tableShow" :data="tableData" style="width: 100%"
+        <el-table v-show="tableShow" :data="tableData"
+          style="width: 100%; height: 100%; overflow: hidden; overflow-y: auto;"
           :row-class-name="tableRowClassName">
-          <el-table-column label="序号" width="70">
+          <el-table-column label="序号" width="70px">
             <template slot-scope="scope">
               <i class="el-icon-document"></i>
               <span style="margin-left: 10px">{{ scope.row.sort }}</span>
@@ -32,7 +33,7 @@
               <!-- </el-popover> -->
             </template>
           </el-table-column>
-          <el-table-column label="操作" fixed="right" width="200">
+          <el-table-column label="操作" fixed="right" width="200px" style="height: 100%;">
             <template slot-scope="scope">
               <el-button size="mini" @click="handleEdit(scope.$index, scope.row)">查看</el-button>
               <el-button size="mini" @click="handleDelete(scope.$index, scope.row)">删除</el-button>
