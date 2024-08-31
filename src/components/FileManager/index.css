@@ -76,6 +76,7 @@
   height: 0;
 }
 
-.el-table__fixed-right {
-  overflow: visible;
+.el-table__fixed-right::before {
+  /* overflow: visible; */
+  display: none;
 }

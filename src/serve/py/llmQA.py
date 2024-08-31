@@ -11,7 +11,7 @@ with open("./config.json", "r") as f:
 
 # 智谱模型
 def zhipuChat(input):
-    print("智谱called")
+    # print("智谱called")
     client = ZhipuAI(
         api_key="ca48767be5d0dbc41b3a135f7be786da.w5O4CRLo111zUlbj"
     )  # 填写您自己的APIKey
@@ -25,7 +25,7 @@ def zhipuChat(input):
 
 
 def chatmodel(query):
-    print("llm called")
+    # print("llm called")
     url = llm_url
     datas = {"questions": query}
     datas = json.dumps(datas)

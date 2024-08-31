@@ -5,13 +5,12 @@
       <div class="fileTxtHead">
       </div>
     </div>
-    <div v-if="contextMenu.visible" :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }"
+    <!-- <div v-if="contextMenu.visible" :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }"
       class="context-menu">
       <ul>
         <li @click="addSelectText(contextMenu.index)">添加</li>
-        <!-- <li @click="deleteText(contextMenu.index)">删除</li> -->
       </ul>
-    </div>
+    </div> -->
     <div id="FilePreSeqBody">
       <div class="filePre">
 
@@ -107,7 +106,7 @@
       </div>
       <div class="fileTxt" ref="fileTest">
         <div class="fileTxtBody">
-          <el-card v-for="item in textData" :key="item.index" class="box-card">
+          <el-card v-for="item, index in textData" :key="item.index" class="box-card chunk-card">
             <div slot="header" class="clearfix">
               <el-tag type="info">{{ `#chunk ${item.index + 1}` }}</el-tag>
               <el-button class="chunkButs" size="small" type="primary" plain
@@ -117,6 +116,8 @@
                 @click="editText(item.index)">编辑</el-button>
               <el-button class="chunkButs" size="small" type="primary" plain
                 @click="chunkText(item.index)">分割</el-button>
+              <el-button class="chunkButs" size="small" type="primary" plain
+                @click="treeReload(item.index)">重新生成树</el-button>
 
               <el-button class="chunkButs" size="small" type="primary" plain @click="addText(item.index)">新增</el-button>
               <template v-if="mergeHoverIndex != item.index">
@@ -131,24 +132,43 @@
                   icon="el-icon-caret-bottom"></el-button>
               </div>
             </div>
-            <p class="formatted-text1" v-if="editingIndex != item.index"
-              @contextmenu.prevent="showContextMenu($event, item.index)" @click="pClk()" @mouseup="handleSelection">
-              {{ item.prevOverlap }}
-            </p>
-            <p class="formatted-text" v-if="editingIndex != item.index"
-              @contextmenu.prevent="showContextMenu($event, item.index)" @click="pClk()" @mouseup="handleSelection">
-              {{ item.nonOverlap }}
-            </p>
-            <p class="formatted-text1" v-if="editingIndex != item.index"
-              @contextmenu.prevent="showContextMenu($event, item.index)" @click="pClk()" @mouseup="handleSelection">
-              {{ item.nextOverlap }}
-            </p>
-            <el-input v-else ref="input" @blur="saveText" type="textarea" autosize placeholder=""
-              v-model="item.sentence">
-            </el-input>
+
+            <div class="chunk-text">
+              <p class="formatted-text1" v-if="editingIndex != item.index"
+                @contextmenu.prevent="showContextMenu($event, item.index)" @click="pClk()" @mouseup="handleSelection">
+                {{ item.prevOverlap }}
+              </p>
+              <p class="formatted-text" v-if="editingIndex != item.index"
+                @contextmenu.prevent="showContextMenu($event, item.index)" @click="pClk()" @mouseup="handleSelection">
+                {{ item.nonOverlap }}
+              </p>
+              <p class="formatted-text1" v-if="editingIndex != item.index"
+                @contextmenu.prevent="showContextMenu($event, item.index)" @click="pClk()" @mouseup="handleSelection">
+                {{ item.nextOverlap }}
+              </p>
+              <el-input v-else ref="input" @blur="saveText" type="textarea" autosize placeholder=""
+                v-model="item.sentence">
+              </el-input>
+            </div>
+
+            <div class="chunk-tree">
+              <div :id="'tree' + index" class="tree">
+
+              </div>
+            </div>
+
+            <div class="chunk-tag">
+              <el-tag :key="tag" v-for="tag in item.tags" closable :disable-transitions="false"
+                @close="TaghandleClose(index, tag)">
+                {{ tag }}
+              </el-tag>
+              <el-input class="input-new-tag" v-if="item.inputVisible" v-model="inputValue" ref="saveTagInput"
+                size="small" @keyup.enter.native="TaghandleInputConfirm(index)" @blur="TaghandleInputConfirm(index)">
+              </el-input>
+              <el-button v-else class="button-new-tag" size="small" @click="TagshowInput(index)">添加标签</el-button>
+            </div>
           </el-card>
         </div>
-        <!-- <treeMap :treeData="tree_data" ref="treecontainer"></treeMap> -->
       </div>
     </div>
   </div>
@@ -159,16 +179,14 @@ import * as d3 from 'd3';
 import axios from "axios";
 import * as PDFJS from "pdfjs-dist/legacy/build/pdf";  // 引入PDFJS 
 import pdfjsWorker from "pdfjs-dist/legacy/build/pdf.worker.entry.js"; // 引入workerSrc的地址
-import treeMap from '../treeMap/index.vue'
 PDFJS.GlobalWorkerOptions.workerSrc = pdfjsWorker; //设置PDFJS.GlobalWorkerOptions.workerSrc的地址
 const docx = require("docx-preview");
 export default {
   props: ["curFileName"],
-  components: { treeMap },
   data() {
     return {
-      dgShow: true,
-      gsShow: false,
+      dgShow: false,
+      gsShow: true,
       pdfPagesNum: 0,
       currentpage: 2,
       textNum: 600,
@@ -176,12 +194,11 @@ export default {
       SplitSybs: "",
       SplitSybsChart: "章",
       SplitSybsArt: "条",
-      SplitType: 0,
+      SplitType: 1,
       pdfUrl: '',
       fileName: '',
       rate: 1,
       textData: [],
-      tree_data: {},
       chunkSize: 300,
       overlap: 50,
       selectedText: '',
@@ -192,6 +209,8 @@ export default {
         index: null
       },
       mergeHoverIndex: null,
+      inputVisible: false,
+      inputValue: ""
     };
   },
   watch: {
@@ -244,7 +263,7 @@ export default {
         })
         .then((res) => {
           let seqData = res.body
-
+          // 数组类型要在前面加...(展开运算符)
           _this.textData.splice(index, 1, ...seqData);
           _this.updataChunk(_this.textData);
           // _this.$message({
@@ -261,9 +280,50 @@ export default {
       // this.updataChunk(this.textData);
       this.contextMenu.visible = false;
     },
+    treeReload(index) {
+      // console.log("cccc", this.textData[index])
+      let predata = this.textData[index]
+      const loading = this.$loading({
+        lock: true,
+        text: '正在重新生成',
+        spinner: 'el-icon-loading',
+        background: 'rgba(0, 0, 0, 0.7)'
+      });
+      const _this = this;
+      this.$http
+        .post("/api/loadtree", { textData: _this.textData[index]['sentence'] },
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+        .then((res) => {
+          let newtree = res.body
+          predata.tree = newtree
+          // 更新索引为index的元素为newtext
+          _this.textData.splice(index, 1, predata);
+
+          _this.updataChunk(_this.textData);
+          loading.close()
+          _this.$notify({
+            title: '重新生成完成',
+            type: 'success',
+            message: '重新生成完成,请确认后添加至知识库'
+          });
+        });
+
+    }
+    ,
     updataChunk(data) {
       this.textData = this.processTexts(data);
       console.log("data", this.textData)
+
+      this.$nextTick(_ => {
+        // 更新tree图
+        for (let i = 0; i < this.textData.length; i++) {
+          this.drawTree(this.textData[i].tree, i)
+        }
+      });
     },
     pClk() {
       this.contextMenu.visible = false;
@@ -383,6 +443,9 @@ export default {
           prevOverlap: prevOverlap,
           nonOverlap: nonOverlap,
           nextOverlap: nextOverlap,
+          tags: texts[i].tags,
+          inputVisible: false,
+          tree: texts[i].tree
         });
       }
       this.textNum = textNum;
@@ -397,6 +460,12 @@ export default {
       this.mode = 1;
     },
     textChunkClk() {
+      const loading = this.$loading({
+        lock: true,
+        text: '正在分割中',
+        spinner: 'el-icon-loading',
+        background: 'rgba(0, 0, 0, 0.7)'
+      });
       const _this = this;
       let chunkSize = this.chunkSize;
       let overlap = this.overlap;
@@ -413,8 +482,7 @@ export default {
           let seqData = res.body.sentences
           _this.updataChunk(seqData);
 
-          // this.$refs.treecontainer.treeDataUpdate(_this.tree_data, res.body.treeData)
-          _this.tree_data = res.body.treeData
+          loading.close();
           // _this.$message({
           //   message: '文本分割完成',
           //   type: 'success'
@@ -427,6 +495,12 @@ export default {
         });
     },
     confirmClk() {
+      const loading = this.$loading({
+        lock: true,
+        text: '正在上传',
+        spinner: 'el-icon-loading',
+        background: 'rgba(0, 0, 0, 0.7)'
+      });
       const _this = this;
       this.$http
         .post("/api/seqToVec", { textData: _this.textData, fileName: _this.curFileName }, {
@@ -439,7 +513,7 @@ export default {
           //   message: '成功建立向量数据库',
           //   type: 'success'
           // });
-
+          loading.close();
           _this.$notify({
             title: '保存成功',
             type: 'success',
@@ -545,6 +619,95 @@ export default {
         }
       });
     },
+    TaghandleClose(index, tag) {
+      console.log(this.textData[index])
+      this.textData[index].tags.splice(this.textData[index].tags.indexOf(tag), 1);
+    },
+
+    TagshowInput(index) {
+      // 改成每个文本块一个visible控制
+      this.textData[index].inputVisible = true;
+      let _this = this
+      this.$nextTick(_ => {
+        this.$refs.saveTagInput.$refs.input.focus();
+      });
+    },
+
+    TaghandleInputConfirm(index) {
+      let inputValue = this.inputValue;
+      // index为第index条文本块
+      console.log(this.textData[index])
+
+      if (inputValue) {
+        this.textData[index].tags.push(inputValue);
+      }
+      this.inputVisible = false;
+      this.inputValue = '';
+    },
+    drawTree(data, index) {
+      let container = "tree" + index
+      // console.log("Tree data", data)
+      const format = d3.format(",");
+      const nodeSize = 17;
+      const root = d3.hierarchy(data).eachBefore((i => d => d.index = i++)(0));
+      const nodes = root.descendants();
+      const width = document.getElementById(container).offsetWidth;
+      // const height = (nodes.length + 1) * nodeSize;
+      const height = document.getElementById(container).offsetHeight
+
+      d3.select("#" + container).selectAll("svg").remove()
+
+      function zoomed(transform) {
+        g.style('transition', 'none')
+        g.attr('transform', `translate(${transform.x},${transform.y}) scale(${transform.k})`
+        )
+      }
+      let zoom = d3.zoom().scaleExtent([0, 8]).on('zoom', function (current) {
+        zoomed(current.transform)
+      })
+      const svg = d3.select("#" + container)
+        .append("svg")
+        .call(zoom)  //给svg绑定zoom事件 
+        .attr("width", width)
+        .attr("height", height)
+        .attr("viewBox", [-nodeSize / 2, -nodeSize * 3 / 2, width, height])
+        .attr("style", "max-width: 100%; height: auto; font: 10px sans-serif; overflow: visible;");
+
+      const g = svg.append('g')
+
+      const link = g.append("g")
+        .attr("fill", "none")
+        .attr("stroke", "#999")
+        .selectAll()
+        .data(root.links())
+        .join("path")
+        .attr("d", d =>
+          `
+        M${d.source.depth * nodeSize},${d.source.index * nodeSize}
+        V${d.target.index * nodeSize}
+        h${nodeSize}
+          `
+        );
+
+      const node = g.append("g")
+        .selectAll()
+        .data(nodes)
+        .join("g")
+        .attr("transform", d => `translate(0,${d.index * nodeSize})`);
+
+      node.append("circle")
+        .attr("cx", d => d.depth * nodeSize)
+        .attr("r", 2.5)
+        .attr("fill", d => d.children ? null : "#999");
+
+      node.append("text")
+        .attr("dy", "0.32em")
+        .attr("x", d => d.depth * nodeSize + 6)
+        .text(d => d.data.name);
+
+      node.append("title")
+        .text(d => d.ancestors().reverse().map(d => d.data.name).join("/"));
+    }
   },
   created() {
     const _this = this;

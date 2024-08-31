@@ -13,6 +13,7 @@ app = Flask(__name__)
 CORS(app)
 import pythoncom
 import getSeq
+import chunk2tree as c2t
 import myTools
 import sentence2Vec
 import mongServe as mg
@@ -302,7 +303,7 @@ def word2seq():
     if SplitType == 0:
         sentences = getSeq.RCSplit(word, chunkSize, overlap)
     else:
-        (sentences, treeData) = getSeq.split_documentByOriChunk(file, word)
+        sentences = getSeq.split_documentByOriChunk(file, word)
     return jsonify({"sentences": sentences, "treeData": treeData})
 
 
@@ -341,6 +342,19 @@ def seq2vec():
     return jsonify(["success"])
 
 
+@app.route("/loadtree", methods=["POST"])
+def loadtree():
+    textData = request.json.get("textData")
+    res = c2t.getmind(textData)
+    print(res)
+    return jsonify(res)
+
+
+"""
+回答索引匹配函数
+"""
+
+
 def remove_special_characters(strings):
     """
     处理掉列表中的特殊字符
@@ -353,11 +367,6 @@ def remove_special_characters(strings):
         for string in strings
         if not any(char in special_characters for char in string)
     ]
-
-
-"""
-回答索引匹配函数
-"""
 
 
 def ansSplit(ans):
@@ -388,6 +397,7 @@ def quotesMap(ansArr, quoteList):
     indexList = []
     index = 0
     nowNum = index
+    print("quoteList", list(q["sentence"] for q in quoteList))
 
     for i in range(0, len(ansArr)):
         # 找到与ans最匹配的quote
@@ -573,8 +583,8 @@ def reQuery(questions):
     try:
         response_message = llmqa.chatmodel(user_input)
     except:
-        # response_message = llmqa.zhipuChat(user_input)
-        response_message = "err"
+        response_message = llmqa.zhipuChat(user_input)
+        # response_message = "err"
 
     # print("优化回答", response_message)
     return questions + "\n" + response_message
@@ -589,8 +599,8 @@ def preAnswer(questions):
     try:
         response_message = llmqa.chatmodel(user_input)
     except:
-        # response_message = llmqa.zhipuChat(user_input)
-        response_message = "err"
+        response_message = llmqa.zhipuChat(user_input)
+        # response_message = "err"
     # print("预回答：", response_message)
     return questions + "\n" + response_message
 
@@ -735,8 +745,8 @@ def QandA():
         response_message = llmqa.chatmodel(user_input)
     except:
         print("大模型出错")
-        # response_message = llmqa.zhipuChat(user_input)
-        response_message = "err"
+        response_message = llmqa.zhipuChat(user_input)
+        # response_message = "err"
 
     answers = str(response_message)
 

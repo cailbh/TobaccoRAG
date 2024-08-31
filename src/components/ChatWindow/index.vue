@@ -65,7 +65,8 @@
             <searchControl @searchChange="searchChange">
             </searchControl>
 
-            <el-input type="textarea" :autosize="{ minRows: 4, maxRows: 4 }" placeholder="请输入内容" v-model="inputText">
+            <el-input type="textarea" :autosize="{ minRows: 4, maxRows: 4 }" placeholder="请输入内容" v-model="inputText"
+                @keyup.enter.native="submit">
             </el-input>
             <el-button class="subBut" size="mini" @click="submit" icon="el-icon-upload2" type="primary" circle>
             </el-button>
@@ -137,6 +138,9 @@ export default {
                     console.log("getHistory", response)
                     _this.messages = response.body
                     // }
+                    setTimeout(() => {
+                        _this.scrollToBottom();
+                    }, 1000);
                 });
         },
         saveHistory() {
@@ -170,7 +174,7 @@ export default {
                     text: this.inputText,
                     isMe: true
                 });
-                
+
                 const loading = this.$loading({
                     lock: true,
                     text: '大模型正在回答您的问题',

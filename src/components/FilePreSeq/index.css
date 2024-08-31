@@ -165,10 +165,78 @@
   overflow: auto;
 }
 
-.box-card {
+.chunk-card {
   margin: 4px;
-  width: calc(50% - 10px);
+  width: calc(100% - 10px);
+  position: relative;
 }
+
+.chunk-card .el-card__body {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.chunk-text {
+  position: relative;
+  width: calc(60% - 12px);
+  margin-right: 10px;
+}
+
+.chunk-tree {
+  width: 40%;
+  position: relative;
+  /* height: 100%; */
+  border-left: 0.5px rgb(203 203 223) solid;
+}
+
+.tree {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 2%;
+  /* background-color: beige; */
+  overflow: hidden;
+}
+
+.tree svg {
+  overflow: hidden !important;
+}
+
+.chunk-tag {
+  width: 100%;
+  border-top: 0.5px rgb(203 203 223) solid;
+  padding-top: 10px;
+}
+
+.chunk-tag .el-tag {
+  margin-bottom: 10px;
+}
+
+.chunk-tag .input-new-tag {
+  margin-bottom: 10px;
+}
+
+
+.chunk-tag .el-tag+.el-tag {
+  margin-left: 10px;
+}
+
+.chunk-tag .button-new-tag {
+  margin-left: 10px;
+  height: 32px;
+  line-height: 30px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.chunk-tag .input-new-tag {
+  width: 90px;
+  margin-left: 10px;
+  vertical-align: bottom;
+}
+
 
 .halfDiv {
   float: left;

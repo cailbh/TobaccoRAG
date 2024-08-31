@@ -3,6 +3,16 @@ import re
 
 # 问答
 import llmQA as llmqa
+import chunk2tree as c2t
+import multthreads as mthreads
+
+import json
+
+threads_num = 4
+# 读取json文件
+with open("./config.json", "r") as f:
+    data = json.load(f)
+    threads_num = data["seq_threads_num"]
 
 
 # 递归分割
@@ -33,11 +43,6 @@ def split_documentByOriChunk(filename, text):
     chapter_description = ""
     current_articles = []
 
-    treeData = {"name": filename, "children": []}
-    nowTree = {
-        "name": "",
-        "children": [],
-    }
     # 按行处理文本
     lines = text.split("\n")
     for line in lines:
@@ -49,57 +54,61 @@ def split_documentByOriChunk(filename, text):
             # 保存当前章节及其条款
             if current_chapter:
                 result.append((current_chapter, chapter_description, current_articles))
-                treeData["children"].append(nowTree)
 
             # 设置新的章节标题和描述
             current_chapter = chapter_match.group(1)
             chapter_description = chapter_match.group(2)
             current_articles = []
-            nowTree = {
-                "name": current_chapter + chapter_description,
-                "children": [],
-            }
+
         # 有新的条款出现
         elif article_match:
             # 添加条款到当前条款列表中
             current_articles.append(
                 article_match.group(1) + " " + article_match.group(2)
             )
-            nowTree["children"].append(
-                {
-                    "name": article_match.group(1) + " " + article_match.group(2),
-                    "size": 1,
-                }
-            )
+
         # 当前章节或条款还没结束
         else:
             # 添加到当前章节的描述部分
             if current_articles:
                 # 当行包含条款时，将描述合并到当前条款中
                 current_articles[-1] += "\n" + line
-                nowTree["children"][-1]["name"] += "\n" + line
             else:
                 # 章节描述的内容
                 chapter_description += "\n" + line
-                nowTree["name"] += "\n" + line
 
     # 保存最后一个章节及其条款
     if current_chapter:
         result.append((current_chapter, chapter_description, current_articles))
-        treeData["children"].append(nowTree)
 
     res = []
     i = 0
+    seqList = []
     # i为索引 从0开始; ch为内容
     for i, ch in enumerate(result):
         # print("ch", ch)
         for seq in ch[2]:
-            res.append({"sentence": ch[0] + ch[1] + seq, "index": i})
+            seqList.append(ch[0] + ch[1] + seq)
+            res.append(
+                {
+                    "sentence": ch[0] + ch[1] + seq,
+                    "index": i,
+                    # "tags": TagGet(ch[0] + ch[1] + seq),
+                    # "tree": c2t.getmind(ch[0] + ch[1] + seq),
+                }
+            )
             i += 1
-    return (res, treeData)
+
+    treeList = mthreads.multThreads(c2t.getmind, seqList, threads_num)
+    tagsList = mthreads.multThreads(TagGet, seqList, threads_num)
+    for i in range(len(res)):
+        res[i]["tags"] = tagsList[i]
+        res[i]["tree"] = treeList[i]
+
+    return res
 
 
-def labelGet(text):
+def TagGet(text):
     ans = ""
     input = (
         """
@@ -110,16 +119,19 @@ def labelGet(text):
     """
         + text
     )
+    # try:
+    # ans = llmqa.chatmodel(input)
+    # except:
+    # print("llm err")
     try:
-        ans = llmqa.chatmodel(input)
-    except:
-        print("llm err")
         ans = llmqa.zhipuChat(input)
+    except:
+        ans = "None"
     return ans.split(",") if ans != "None" else []
 
 
 if __name__ == "__main__":
-    res = labelGet(
+    res = TagGet(
         """
 第二章设立第十二条 党组的设立，应当由党中央或者本级地方党委审批。有关管委会的工作部门设立党组，由本级党委授权管委会党工委审批。党组不得审批设立党组。
 分党组的设立，由党组报本级党委组织部门审批。
