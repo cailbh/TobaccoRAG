@@ -27,3 +27,5 @@ pnpm-debug.log*
 /src/serve/py/dist
 /src/serve/py/build
 /src/serve/py/index.spec
+/src/serve/py/glm4.py
+/src/serve/py/cutfile.py

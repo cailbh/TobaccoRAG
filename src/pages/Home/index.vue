@@ -1,5 +1,33 @@
 <template>
   <div id="root">
+    <el-dialog :title="isregist ? '注册' : '登录'" :visible.sync="isunlogin" width="30%" center label-position="left"
+      :close-on-click-modal="false" :show-close="false">
+      <el-form :model="ruleForm" :rules="loginrules" ref="ruleForm" label-width="100px" class="demo-ruleForm">
+        <el-form-item label="用户名" prop="userName">
+          <el-input v-model="ruleForm.userName"></el-input>
+        </el-form-item>
+        <el-form-item label="密码" prop="password">
+          <el-input v-model="ruleForm.password" show-password></el-input>
+        </el-form-item>
+        <el-form-item v-if="isregist" label="确定密码" prop="repassword">
+          <el-input v-model="ruleForm.repassword" show-password></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer" style="display: block;">
+        <div v-if="isregist === false">
+          <el-button type="text" @click="registChange()" v-text="'先注册'"
+            style="width: 40%; text-align: right;"></el-button>
+          <el-button type="text" @click="registChange()" v-text="'忘记密码'"
+            style="width: 40%; text-align: left;"></el-button>
+        </div>
+        <div v-else>
+          <el-button type="text" @click="registChange()" v-text="'去登录'" style="width: 100%;"></el-button>
+        </div>
+        <el-button type="primary" style="width: calc(100% - 40px);"
+          @click="logincheck(ruleForm.userName, ruleForm.password)">确 定</el-button>
+      </span>
+    </el-dialog>
+
     <!-- <div class="head"> -->
     <!-- <Head></Head> -->
     <!-- </div> -->
@@ -11,12 +39,17 @@
           智能问答系统
         </div>
         <div class="navs">
-          <el-menu class="el-menu-demo navs" mode="horizontal">
+          <!-- <el-menu class="el-menu-demo navs" mode="horizontal">
             <el-menu-item index="1">About</el-menu-item>
             <el-menu-item index="2">Contact</el-menu-item>
             <el-menu-item index="3">Help</el-menu-item>
-          </el-menu>
+          </el-menu> -->
+          <span style="display: inline-block;margin-right: 20px;margin-top: 20px;">{{ ruleForm.userName }}</span>
+          <el-button style="display: inline-block;margin-right: 20px;margin-top: 20px;" v-if="!isunlogin" size="small"
+            type="primary" @click="exitLogin">退出登录</el-button>
         </div>
+
+
       </div>
       <div id="menuDiv">
         <el-menu :default-active="defaultActive" class="el-menu" @open="handleOpen" @close="handleClose"
@@ -45,7 +78,7 @@
         </el-menu>
       </div>
       <div id="contentBody">
-        <component :is="currentView" :curFileName="curFileName"></component>
+        <component :is="currentView" :curFileName="curFileName" :userName="ruleForm.userName"></component>
       </div>
     </div>
   </div>
@@ -58,6 +91,7 @@ import ChatWindow from '@/components/ChatWindow/index.vue';
 import FileManager from '@/components/FileManager/index.vue';
 import mammoth from "mammoth";
 import axios from 'axios';
+import { json, tree } from 'd3';
 const docx = require("docx-preview");
 
 export default {
@@ -89,6 +123,27 @@ export default {
         "rgb(200,200,200)",
       ],
       currentView: "",
+      isunlogin: true,
+      isregist: false,
+      ruleForm: {
+        userName: '',
+        password: '',
+        repassword: ''
+      },
+      loginrules: {
+        userName: [
+          { required: true, message: '请输入用户名', trigger: 'blur' },
+          { min: 2, max: 5, message: '长度在 2 到 5 个字符', trigger: 'blur' }
+        ],
+        password: [
+          { required: true, message: '请输入密码', trigger: 'blur' },
+          { min: 6, max: 15, message: '长度在 6 到 15 个字符', trigger: 'blur' }
+        ],
+        repassword: [
+          { required: true, message: '请再次输入密码', trigger: 'blur' },
+          { validator: this.checkPassword, trigger: 'blur' }
+        ]
+      }
     };
   },
   watch: {
@@ -163,18 +218,125 @@ export default {
       }
     },
     handleClose(key, keyPath) {
+    },
+    checkPassword(rule, value, callback) {
+      if (value !== this.ruleForm.password) {
+        callback(new Error('两次输入的密码不一致'));
+      } else {
+        callback();
+      }
+    },
+    logincheck(name, password) {
+      let _this = this
+      if (this.isregist) {
+        if (this.ruleForm.password == this.ruleForm.repassword) {
+          this.$http
+            .post("/api/registcheck", {
+              name: name,
+              password: password
+            }, {
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            })
+            .then((response) => {
+              console.log(response)
+              let data = response.body;
+              if (data.logindata != 0) {
+                _this.isunlogin = false
+
+                _this.$cookies.set("user", JSON.stringify(_this.ruleForm))
+                _this.$notify({
+                  title: data.data,
+                  type: 'success',
+                  message: `注册成功 欢迎您${name}`
+                });
+              }
+              else {
+                _this.$notify({
+                  title: data.data,
+                  type: 'error',
+                  message: `用户名已被占用 请重新登录`
+                });
+              }
+            });
+        }
+      }
+      else {
+        this.$http
+          .post("/api/logincheck", {
+            name: name,
+            password: password
+          }, {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+          .then((response) => {
+            console.log(response)
+            let data = response.body;
+            if (data.logindata == 0) {
+              _this.isunlogin = false
+
+              _this.$cookies.set("user", JSON.stringify(_this.ruleForm))
+              _this.$notify({
+                title: data.data,
+                type: 'success',
+                message: `登录成功，欢迎您 ${name}`
+              });
+            }
+            else {
+              _this.$notify({
+                title: data.data,
+                type: 'error',
+                message: `登录失败，请检查重试`
+              });
+            }
+          });
+      }
+    },
+    registChange() {
+      this.isregist = !this.isregist
+    },
+    exitLogin() {
+      this.isregist = false
+      this.isunlogin = true
+
+      this.ruleForm = {
+        userName: '',
+        password: '',
+        repassword: ''
+      }
     }
   },
   created: function () {
     var _this = this;
   },
   mounted() {
+    const loading = this.$loading({
+      lock: true,
+      text: '正在加载',
+      spinner: 'el-icon-loading',
+      background: 'rgba(0, 0, 0, 0.7)'
+    });
+
     const _this = this;
     this.$el.style.setProperty("--heightStyle", document.documentElement.clientHeight + "px");
     this.$bus.$on('changeFilePre', (val) => {
       _this.curFileName = val;
       _this.currentView = "FilePreSeq";
     });
+
+    // 获取cookie查看是否已经登录
+    if (this.$cookies.isKey("user")) {
+      this.ruleForm = this.$cookies.get("user")
+      _this.logincheck(_this.ruleForm.userName, _this.ruleForm.password)
+    }
+
+    this.$nextTick(() => {
+      loading.close()
+    })
+
   },
   beforeDestroy() {
     clearTimeout(this.timer);

@@ -351,6 +351,64 @@ def loadtree():
 
 
 """
+用户函数
+"""
+
+
+@app.route("/logincheck", methods=["POST"])
+def logincheck():
+    name = request.json.get("name")
+    password = request.json.get("password")
+    userdata = mg.fetch_user_data_db("user", "name", name)
+    print(userdata)
+    print(type(userdata))
+    res = {}
+    if userdata == {}:
+        print("用户不存在")
+        res = {"logindata": 1, "data": "用户不存在"}
+    elif userdata["password"] != password:
+        print("密码或用户名错误")
+        res = {"logindata": 2, "data": "密码或用户名错误"}
+    else:
+        print("登录成功")
+        res = {"logindata": 0, "data": "登陆成功"}
+    return res
+
+
+@app.route("/registcheck", methods=["POST"])
+def registcheck():
+    name = request.json.get("name")
+    password = request.json.get("password")
+    userdata = mg.fetch_user_data_db("user", "name", name)
+    print(userdata)
+    res = {}
+    if userdata == {}:
+        userdata = {
+            "name": name,
+            "password": password,
+            "QAHistory": [
+                {
+                    "id": 1,
+                    "isMe": False,
+                    "quote": [],
+                    "rawText": "你好,我有什么可以帮助你的吗？",
+                    "text": "你好,我有什么可以帮助你的吗？",
+                    "textWithQuote": [
+                        {"quote": -1, "text": "你好,我有什么可以帮助你的吗？"}
+                    ],
+                }
+            ],
+        }
+        mg.insert_data("user", [userdata])
+        print("注册成功")
+        res = {"logindata": 1, "data": "注册成功"}
+    else:
+        print("用户名已被占用")
+        res = {"logindata": 0, "data": "注册失败"}
+    return res
+
+
+"""
 回答索引匹配函数
 """
 
@@ -612,20 +670,32 @@ def getFileList():
     return jsonify(filiList)
 
 
-@app.route("/getHistory", methods=["GET"])
+@app.route("/getHistory", methods=["POST"])
 def getHistory():
     print("getHistory")
-    collection_name = "QAHistory"
-    filiList = mg.fetch_alldata_db(collection_name)
-    return jsonify(filiList)
+    username = request.json.get("username")
+    # print(username)
+    # collection_name = "QAHistory"
+    # filiList = mg.fetch_alldata_db(collection_name)
+    userdata = mg.fetch_user_data_db("user", "name", username)
+    fileList = []
+    if userdata == None:
+        print("帐户获取历史记录异常")
+    else:
+        fileList = userdata["QAHistory"]
+    return jsonify(fileList)
 
 
 @app.route("/saveHistory", methods=["POST"])
 def saveHistory():
     print("saveHistory")
     mmr = request.json.get("history")
-    collection_name = "QAHistory"
-    mg.insert_data_clear(collection_name, mmr)
+    username = request.json.get("username")
+    # collection_name = "QAHistory"
+    # mg.insert_data_clear(collection_name, mmr)
+    orgindata = mg.fetch_user_data_db("user", "name", username)
+    orgindata["QAHistory"] = mmr
+    mg.updata_data_findone_db("user", "name", username, orgindata)
     return jsonify(["success"])
     # collection_name = "QAHistory"
     # filiList = mg.fetch_alldata_db(collection_name)

@@ -50,6 +50,16 @@ def fetch_data_findone_db(collectionName, key, value):
     return res
 
 
+def fetch_user_data_db(collectionName, key, value):
+    # 获取集合
+    collection = db[collectionName]
+    data = collection.find_one({key: value})
+    res = {}
+    if data != None:
+        res = data
+    return res
+
+
 def del_data_db(collectionName, key, value):
     # 获取集合
     collection = db[collectionName]
@@ -90,7 +100,7 @@ def fetch_alldata_db(collectionName):
 
 
 def insert_data(collection_name, data):
-    # 获取集合
+    # 插入数据
     collection = db[collection_name]
     # # 清空集合
     # collection.delete_many({})
@@ -100,7 +110,7 @@ def insert_data(collection_name, data):
 
 
 def insert_data_clear(collection_name, data):
-    # 获取集合
+    # 先清空再插入数据
     collection = db[collection_name]
     # # 清空集合
     collection.delete_many({})

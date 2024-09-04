@@ -118,6 +118,8 @@ export default {
     },
     created() {
         const _this = this;
+        this.username = this.userName
+        console.log(this.username)
         this.getHistory()
         this.$nextTick(() => {
             setTimeout(() => {
@@ -132,8 +134,9 @@ export default {
         },
         getHistory() {
             const _this = this;
+            console.log(_this)
             this.$http
-                .get("/api/getHistory", { params: {} }, {})
+                .post("/api/getHistory", { username: _this.username }, {})
                 .then((response) => {
                     console.log("getHistory", response)
                     _this.messages = response.body
@@ -146,7 +149,7 @@ export default {
         saveHistory() {
             const _this = this;
             this.$http
-                .post("/api/saveHistory", { history: _this.messages, }, {
+                .post("/api/saveHistory", { history: _this.messages, username: _this.username }, {
                     headers: {
                         'Content-Type': 'application/json'
                     }
@@ -303,6 +306,7 @@ export default {
             nowElem.setAttribute("id", "")
         }
     },
+    props: ['userName']
 };
 </script>
 
