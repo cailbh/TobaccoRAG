@@ -119,12 +119,13 @@ def TagGet(text):
     """
         + text
     )
-    # try:
-    # ans = llmqa.chatmodel(input)
+
+    try:
+        # ans = llmqa.chatmodel(input)
+        ans = llmqa.zhipuChat(input)
     # except:
     # print("llm err")
-    try:
-        ans = llmqa.zhipuChat(input)
+    # ans = llmqa.zhipuChat(input)
     except:
         ans = "None"
     return ans.split(",") if ans != "None" else []

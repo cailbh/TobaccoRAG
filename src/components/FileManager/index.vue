@@ -14,8 +14,7 @@
 
       <div id="FileManagerPanelDiv" class="panelBody" ref="FileManagerPanelDiv">
         <el-table v-show="tableShow" :data="tableData"
-          style="width: 100%; height: 100%; overflow: hidden; overflow-y: auto;"
-          :row-class-name="tableRowClassName">
+          style="width: 100%; height: 100%; overflow: hidden; overflow-y: auto;" :row-class-name="tableRowClassName">
           <el-table-column label="序号" width="70px">
             <template slot-scope="scope">
               <i class="el-icon-document"></i>
@@ -33,7 +32,7 @@
               <!-- </el-popover> -->
             </template>
           </el-table-column>
-          <el-table-column label="操作" fixed="right" width="200px" style="height: 100%;">
+          <el-table-column label="操作" fixed="right" width="200px" :max-height="2000">
             <template slot-scope="scope">
               <el-button size="mini" @click="handleEdit(scope.$index, scope.row)">查看</el-button>
               <el-button size="mini" @click="handleDelete(scope.$index, scope.row)">删除</el-button>
