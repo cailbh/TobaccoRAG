@@ -73,10 +73,10 @@
 } */
 
 .el-table::before {
-  height: 0;
+  /* height: 0; */
 }
 
 .el-table__fixed-right::before {
   /* overflow: visible; */
-  display: none;
+  /* display: none; */
 }

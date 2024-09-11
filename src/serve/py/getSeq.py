@@ -25,10 +25,33 @@ def RCSplit(word, chunkSize, overlap):
         separators=["\n\n", "\n", " ", ""],
     )
     seqs = text_splitter.create_documents([word])
-    seqs_dict = [
-        {"sentence": seq.page_content, "index": i} for i, seq in enumerate(seqs)
-    ]
-    return seqs_dict
+    # seqs_dict = [
+    #     {"sentence": seq.page_content, "index": i} for i, seq in enumerate(seqs)
+    # ]
+
+    res = []
+    i = 0
+    seqList = []
+    # i为索引 从0开始; seq为内容
+    for i in range(len(seqs)):
+        res.append(
+            {
+                "sentence": seqs[i].page_content,
+                "index": i,
+                # "tags": TagGet(ch[0] + ch[1] + seq),
+                # "tree": c2t.getmind(ch[0] + ch[1] + seq),
+            }
+        )
+        seqList.append(seqs[i].page_content)
+        i += 1
+
+    treeList = mthreads.multThreads(c2t.getmind, seqList, threads_num)
+    tagsList = mthreads.multThreads(TagGet, seqList, threads_num)
+    for i in range(len(res)):
+        res[i]["tags"] = tagsList[i]
+        res[i]["tree"] = treeList[i]
+
+    return res
 
 
 # 格式分割

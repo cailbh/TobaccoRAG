@@ -13,32 +13,54 @@
       </div>
 
       <div id="FileManagerPanelDiv" class="panelBody" ref="FileManagerPanelDiv">
-        <el-table v-show="tableShow" :data="tableData"
-          style="width: 100%; height: 100%; overflow: hidden; overflow-y: auto;" :row-class-name="tableRowClassName">
+        <!-- <el-table :data="tableData" v-show="tableShow" style="width: 100%" :row-class-name="tableRowClassName"
+          max-height="600">
+          <el-table-column label="序号" width="70px">
+            <template slot-scope="scope">
+              <i class="el-icon-document"></i>
+              <span style="margin-left: 10px">{{ scope.row.sort }}</span>
+            </template>
+</el-table-column>
+<el-table-column label="文档标题">
+  <template slot-scope="scope">
+              <div slot="reference" class="name-wrapper">
+                <span style="margin-left: 10px">{{ scope.row.name }}</span>
+              </div>
+            </template>
+</el-table-column>
+<el-table-column label="操作" fixed="right" width="200px">
+  <template slot-scope="scope">
+              <el-button size="mini" @click="handleEdit(scope.$index, scope.row)">查看</el-button>
+              <el-button size="mini" @click="handleDelete(scope.$index, scope.row)">删除</el-button>
+            </template>
+</el-table-column>
+</el-table> -->
+        <el-table :data="tableData" v-show="tableShow" style="width: 100%" :row-class-name="tableRowClassName"
+          :max-height="tableHeight + 'px'">
+
           <el-table-column label="序号" width="70px">
             <template slot-scope="scope">
               <i class="el-icon-document"></i>
               <span style="margin-left: 10px">{{ scope.row.sort }}</span>
             </template>
           </el-table-column>
+
           <el-table-column label="文档标题">
             <template slot-scope="scope">
-              <!-- <el-popover trigger="hover" placement="top"> -->
-              <!-- <p>姓名: {{ scope.row.name }}</p>
-              <p>住址: {{ scope.row.address }}</p> -->
               <div slot="reference" class="name-wrapper">
                 <span style="margin-left: 10px">{{ scope.row.name }}</span>
               </div>
-              <!-- </el-popover> -->
             </template>
           </el-table-column>
-          <el-table-column label="操作" fixed="right" width="200px" :max-height="2000">
+
+          <el-table-column fixed="right" label="操作" width="200px">
             <template slot-scope="scope">
               <el-button size="mini" @click="handleEdit(scope.$index, scope.row)">查看</el-button>
               <el-button size="mini" @click="handleDelete(scope.$index, scope.row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
+
         <div v-show="preShow" class="preDiv">
           <div class="tagWrap">
             <!-- <div > -->
@@ -84,7 +106,8 @@ export default {
       fileData: [],
       tableData: [],
       currentTagData: '',
-      currentFile: ''
+      currentFile: '',
+      tableHeight: 0
     };
   },
   watch: {
@@ -105,6 +128,10 @@ export default {
         tableData.push(temp)
       });
       this.tableData = tableData;
+
+      this.tableHeight = this.$refs.FileManagerPanelDiv.clientHeight;
+      console.log(this.tableHeight)
+
     }
   },
   methods: {
@@ -153,9 +180,6 @@ export default {
     },
   },
   created() {
-
-
-
     const _this = this;
     this.getTagData()
     this.$nextTick(() => {

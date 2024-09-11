@@ -25,7 +25,7 @@ from bson import ObjectId, json_util
 import reranker as rerank
 import requests
 import json
-
+import qapair as qap
 from waitress import serve
 
 file_path = "D:\data\\"
@@ -758,18 +758,19 @@ def QandA():
     # 是否重排
     isReOrder = request.json.get("isReOrder")
 
-    if reAsk == True:
+    answers = qap.pairQA(questions)
+    quoteList = []
+    if answers != "None":
+        questions += answers
+    elif reAsk == True:
         print("重提问")
         questions = reQuery(questions)
-
-    if preAns == True:
+    elif preAns == True:
         print("预回答")
         questions = preAnswer(questions)
 
     print(questions)
 
-    outKnowledge = ""
-    quoteList = []
     # 选择检索方法
     if isRRF:
         print("混合检索")
@@ -800,30 +801,30 @@ def QandA():
 
     # 资料引用
     quoteList = most_similar_data[:searchWeight]
-    for q in quoteList:
-        outKnowledge += q["sentence"]
+    outKnowledge = ""
 
     # 问答准备
-    prompts = (
-        "你是一名文件数据管理人员，需要对用户的问题根据资料精准得回答，如果资料中得不出结论，就不要回答，下面是相关的资料：\n"
-        + outKnowledge
-    )
+    if answers == "None":
+        for q in quoteList:
+            outKnowledge += q["sentence"]
+        prompts = (
+            "你是一名文件数据管理人员，需要对用户的问题根据资料精准得回答，如果资料中得不出结论，就不要回答，下面是相关的资料：\n"
+            + outKnowledge
+        )
 
-    user_input = prompts + "下面是用户的问题，请回答：" + original_query
-    answers = ""
+        user_input = prompts + "下面是用户的问题，请回答：" + original_query
 
-    print("问题长度：", len(user_input))
-    response_message = llmqa.zhipuChat(user_input)
+        print("问题长度：", len(user_input))
+        response_message = llmqa.zhipuChat(user_input)
 
-    # 如果不能连上本地大模型就用zhipu模型
-    # try:
-    #     response_message = llmqa.chatmodel(user_input)
-    # except:
-    #     print("大模型出错")
-    #     # response_message = llmqa.zhipuChat(user_input)
-    #     response_message = "err"
-
-    answers = str(response_message)
+        # 如果不能连上本地大模型就用zhipu模型
+        # try:
+        #     response_message = llmqa.chatmodel(user_input)
+        # except:
+        #     print("大模型出错")
+        #     # response_message = llmqa.zhipuChat(user_input)
+        #     response_message = "err"
+        answers = str(response_message)
 
     # 对回答进行处理
     ansArr = ansSplit(answers)
@@ -836,6 +837,10 @@ def QandA():
     time_c = time_end - time_start  # 运行所花时间
     print("index cost", time_c, "s")
     # -----------------------------------------------------------
+    # else:
+    #     newQuoteList = []
+    #     textWithQuote = [{"text": answers, "quote": -1}]
+
     return jsonify(
         {
             "answers": answers,
