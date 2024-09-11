@@ -210,7 +210,9 @@ def file_save():
 def file_upload():
     file = request.args.get("file")
     file_name = file.split(".")[1]
-    file_name_ori = file.split(".")[0]
+    file_name_ori = ""
+    for i in range(len(file.split(".")) - 1):
+        file_name_ori += file.split(".")[i]
     path = file_path + file
     outpath = file_path
     pdf_path = f"{outpath}/{file_name_ori}.pdf"
@@ -638,13 +640,13 @@ def reQuery(questions):
         "你是一名文件数据管理人员，需要对用户的问题重新表达\n下面是用户的问题，请对其进行重新表述："
         + questions
     )
-    response_message = llmqa.zhipuChat(user_input)
+    # response_message = llmqa.zhipuChat(user_input)
 
-    # try:
-    #     response_message = llmqa.chatmodel(user_input)
-    # except:
-    #     response_message = llmqa.zhipuChat(user_input)
-    #     response_message = "err"
+    try:
+        response_message = llmqa.chatmodel(user_input)
+    except:
+        # response_message = llmqa.zhipuChat(user_input)
+        response_message = "err"
 
     # print("优化回答", response_message)
     return questions + "\n" + response_message
@@ -656,14 +658,14 @@ def preAnswer(questions):
         "你是一名文件数据管理人员，需要对用户的问题精准的回答\n下面是用户的问题，请回答："
         + questions
     )
-    response_message = llmqa.zhipuChat(user_input)
+    # response_message = llmqa.zhipuChat(user_input)
 
-    # try:
-    #     response_message = llmqa.chatmodel(user_input)
-    # except:
-    #     # response_message = llmqa.zhipuChat(user_input)
-    #     response_message = "err"
-    # # print("预回答：", response_message)
+    try:
+        response_message = llmqa.chatmodel(user_input)
+    except:
+        # response_message = llmqa.zhipuChat(user_input)
+        response_message = "err"
+    # print("预回答：", response_message)
     return questions + "\n" + response_message
 
 
@@ -815,15 +817,15 @@ def QandA():
         user_input = prompts + "下面是用户的问题，请回答：" + original_query
 
         print("问题长度：", len(user_input))
-        response_message = llmqa.zhipuChat(user_input)
+        # response_message = llmqa.zhipuChat(user_input)
 
         # 如果不能连上本地大模型就用zhipu模型
-        # try:
-        #     response_message = llmqa.chatmodel(user_input)
-        # except:
-        #     print("大模型出错")
-        #     # response_message = llmqa.zhipuChat(user_input)
-        #     response_message = "err"
+        try:
+            response_message = llmqa.chatmodel(user_input)
+        except:
+            print("大模型出错")
+            #     # response_message = llmqa.zhipuChat(user_input)
+            response_message = "err"
         answers = str(response_message)
 
     # 对回答进行处理

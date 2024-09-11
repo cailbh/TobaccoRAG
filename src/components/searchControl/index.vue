@@ -1,9 +1,10 @@
 <!--  -->
 <template>
-    <div class="searchControl" style="width: 120px;">
+    <div class="searchControl" style="width: 100%; position: relative;">
         <!-- 打开按钮 -->
         <el-button type="text" @click="dialog = true">设置文件检索策略</el-button>
 
+        <el-button type="text" @click="clearHistory" style="position: absolute; right: 0%; top: 0%;">清空历史记录</el-button>
         <!-- 窗口主体 -->
         <el-dialog title="设置文件检索策略" :visible.sync="dialog" :append-to-body="true" :modal-append-to-body="false"
             @close="cancelChange" style="">
@@ -103,6 +104,11 @@ export default {
 
             this.dialog = false;
         },
+        clearHistory() {
+            console.log("clear Hist")
+            //发送到父元素
+            this.$emit("clearHistory")
+        }
     },
     watch: {
         controlList: {

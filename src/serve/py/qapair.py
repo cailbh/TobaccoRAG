@@ -76,22 +76,31 @@ def pairQA(user_input):
             f"问题{i+1}：{results[i][1]['问题']}, 来源：{results[i][1]['文件名']}, 相似度：{results[i][0]:.4f}"
         )
 
-    # 大模型判定
-    question = f"这是用户提出的问题：{user_input}\n请判断以下的候选问题中是否存在与用户的问题一致的问题，如果一致，请输出问题的序号，否则输出-1：\n\
+    for i in range(5):
+        # 大模型判定
+        question = f"这是用户提出的问题：{user_input}\n请判断以下的候选问题中是否存在与用户的问题一致的问题，如果一致，请输出问题的序号，否则输出-1：\n\
             问题1：{results[0][1]['问题']}， 文件: {results[0][1]['文件名']}\n\
             问题2：{results[1][1]['问题']}， 文件: {results[1][1]['文件名']}\n\
             问题3：{results[2][1]['问题']}， 文件: {results[2][1]['文件名']}\n\
             问题4：{results[3][1]['问题']}， 文件: {results[3][1]['文件名']}\n\
             问题5：{results[4][1]['问题']}， 文件: {results[4][1]['文件名']}\n\n"
 
-    answer_format = f"只需要输出最一致的问题，输出格式: <Answer>1</Answer>\n"
-    example = "例如：3是和用户问题最一致的，输出<Answer>3</Answer>"
+        answer_format = f"只需要输出最一致的问题，输出格式: <Answer>1</Answer>\n"
+        example = "例如：3是和用户问题最一致的，输出<Answer>3</Answer>"
 
-    answer = llm.zhipuChat(question + answer_format + example)
+        try:
+            answer = llm.chatmodel(question + answer_format + example)
+        except:
+            # answer = llm.zhipuChat(question + answer_format + example)
+            answer = "<Answer>-1</Answer>"
 
-    ans = int(answer.split("<Answer>")[1].split("</Answer>")[0])
-    print(ans)
-    print(f"查询时间：{end_time - start_time:.4f}秒")
+        try:
+            ans = int(answer.split("<Answer>")[1].split("</Answer>")[0])
+            print(ans)
+            print(f"查询时间：{end_time - start_time:.4f}秒")
+            break
+        except:
+            ans = -1
     return "None" if ans == -1 else results[ans - 1][1]["回答"]
 
 

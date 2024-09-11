@@ -17,6 +17,24 @@ Vue.use(ElementUI);
 Vue.use(VueCookies);
 Vue.config.productionTip = true;
 
+// v-copy注册
+Vue.directive('copy', {
+  bind: function (el, binding) {
+    el.$copy = function () {
+      const textarea = document.createElement('textarea');
+      textarea.value = binding.value;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('Copy');
+      document.body.removeChild(textarea);
+    }
+    el.addEventListener('click', el.$copy);
+  },
+  unbind: function (el) {
+    el.removeEventListener('click', el.$copy);
+  }
+});
+
 import router from '@/router';
 new Vue({
   render: h => h(App),

@@ -144,8 +144,8 @@ def TagGet(text):
     )
 
     try:
-        # ans = llmqa.chatmodel(input)
-        ans = llmqa.zhipuChat(input)
+        ans = llmqa.chatmodel(input)
+        # ans = llmqa.zhipuChat(input)
     # except:
     # print("llm err")
     # ans = llmqa.zhipuChat(input)

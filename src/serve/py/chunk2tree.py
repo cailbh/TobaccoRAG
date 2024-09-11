@@ -44,12 +44,13 @@ def getmind(text):
         document=text
     )
 
-    resp = llmqa.zhipuChat(prompt)
-
-    # try:
-    # resp = llmqa.chatmodel(prompt)
-    # except:
     # resp = llmqa.zhipuChat(prompt)
+
+    try:
+        resp = llmqa.chatmodel(prompt)
+    except:
+        # resp = llmqa.zhipuChat(prompt)
+        resp = ""
     # print(resp)
     # print("\n")
     resp = resp.replace("\n", "")  # 替换换行符

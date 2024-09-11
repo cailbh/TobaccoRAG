@@ -5,7 +5,7 @@
             <Auxiliary></Auxiliary>
         </div>
         <div class="message-container" id="chat-message-container">
-            <div v-for="message in messages" :key="message.id" class="message">
+            <div v-for="(message, Mindex) in messages" :key="message.id" class="message">
                 <div v-if="message.isMe" class="isMe">
                     <div class="chatHead">
                         <div class="userIcon"></div>
@@ -33,7 +33,7 @@
                         </div> -->
                         <!-- <div class="chatText" v-html="message.text"> -->
                         <div class="chatText">
-                            <div v-for="(sentence, index) in  message.textWithQuote " @mouseover="quoteOver($event)"
+                            <div v-for="(sentence, index) in message.textWithQuote " @mouseover="quoteOver($event)"
                                 @mouseout="quoteOut($event)" @click="quoteClk((message.quote[sentence.quote]))"
                                 v-html="rawToMarked(sentence.text + ((sentence.quote == -1) ? '' : quoteHTML(index + 1, sentence.quote + 1)))"
                                 class="chatTextLine">
@@ -56,13 +56,22 @@
                                 </el-dropdown-item>
                             </el-dropdown-menu>
                         </el-dropdown>
+                        <div style="display: flex; justify-content: right;">
+                            <i style="cursor: pointer;" class="el-icon-warning" :title="'回答的不好'" v-if="message.isbad"
+                                :key="message.isbad" @click="notBadAns(Mindex)"></i>
+                            <i style="cursor: pointer;" class="el-icon-warning-outline" :title="'回答的不好'"
+                                v-else-if="!message.isbad" @click="badAns(Mindex)" :key="message.isbad"></i>
+                            <i style="cursor: pointer; margin-left: 10px;" class="el-icon-s-order" :title="'复制回答内容'"
+                                v-copy="message.rawText"></i>
+
+                        </div>
                     </el-card>
                 </div>
             </div>
         </div>
         <!--输入消息的表单 -->
         <div class=" input-form">
-            <searchControl @searchChange="searchChange">
+            <searchControl @searchChange="searchChange" @clearHistory="clearHistory">
             </searchControl>
 
             <el-input type="textarea" :autosize="{ minRows: 4, maxRows: 4 }" placeholder="请输入内容" v-model="inputText"
@@ -99,7 +108,8 @@ export default {
                             text: "你好,我有什么可以帮助你的吗？",
                             quote: -1 //-1为无索引，其余对对应下标
                         }
-                    ]
+                    ],
+                    isbad: false
                 },
             ],
             searchWay: 1,
@@ -167,6 +177,33 @@ export default {
                     // });
                 });
         },
+        clearHistory() {
+            let _this = this
+            this.messages = [
+                {
+                    id: 1,
+                    text: '你好,我有什么可以帮助你的吗？', //marked语法编译过的text
+                    isMe: false,
+                    quote: [],
+                    rawText: "你好,我有什么可以帮助你的吗？",
+                    textWithQuote: [
+                        {
+                            text: "你好,我有什么可以帮助你的吗？",
+                            quote: -1 //-1为无索引，其余对对应下标
+                        }
+                    ],
+                    isbad: false
+                },
+            ]
+            this.$nextTick(() => {
+                _this.$notify({
+                    title: '清空成功',
+                    type: 'success',
+                    message: '历史记录已清除'
+                });
+                this.saveHistory()
+            })
+        },
         submit() {
             const _this = this;
             if (this.inputText.trim()) {
@@ -210,6 +247,7 @@ export default {
                         let ans = data['answers'];
                         let quote = data['quote'];
                         let textWithQuote = data['textWithQuote'];
+                        let isbad = false
                         console.log("quote", quote);
                         let markedText = marked(ans)
                         // console.log(markedText)
@@ -219,7 +257,8 @@ export default {
                             isMe: false,
                             quote: quote,
                             rawText: ans,
-                            textWithQuote: textWithQuote
+                            textWithQuote: textWithQuote,
+                            isbad: isbad
                         });
 
                         loading.close();
@@ -304,6 +343,36 @@ export default {
         quoteOut(event) {
             let nowElem = event.currentTarget.firstElementChild
             nowElem.setAttribute("id", "")
+        },
+        copyFunc(val) {
+            console.log(val)
+            this.$notify({
+                title: "复制",
+                type: 'success',
+                message: `复制成功`
+            });
+        },
+        badAns(Mindex) {
+            // let _this = this
+            this.messages[Mindex].isbad = true
+            console.log(this.messages[Mindex])
+            this.$nextTick(() => {
+                this.$notify({
+                    title: "回答",
+                    type: 'success',
+                    message: `反馈成功`
+                });
+                this.saveHistory()
+            })
+        },
+        notBadAns(Mindex) {
+            // let _this = this
+            this.messages[Mindex].isbad = false
+            console.log(this.messages[Mindex])
+            this.$nextTick(() => {
+                console.log("ok")
+                this.saveHistory()
+            })
         }
     },
     props: ['userName']
@@ -396,7 +465,7 @@ export default {
     margin: 0 auto;
     overflow: hidden;
     overflow-y: scroll;
-    height: calc(100% - 90px);
+    height: calc(100% - 110px);
     scrollbar-width: none;
     background-image: url('~@/assets/imgs/chatBack.png');
     background-size: cover;
