@@ -15,10 +15,11 @@
       </el-form>
       <span slot="footer" class="dialog-footer" style="display: block;">
         <div v-if="isregist === false">
-          <el-button type="text" @click="registChange()" v-text="'先注册'"
+          <el-button type="text" @click="registChange()" v-text="'先注册'" style="width: 100%;"></el-button>
+          <!-- <el-button type="text" @click="registChange()" v-text="'先注册'"
             style="width: 40%; text-align: right;"></el-button>
           <el-button type="text" @click="registChange()" v-text="'忘记密码'"
-            style="width: 40%; text-align: left;"></el-button>
+            style="width: 40%; text-align: left;"></el-button> -->
         </div>
         <div v-else>
           <el-button type="text" @click="registChange()" v-text="'去登录'" style="width: 100%;"></el-button>
@@ -245,7 +246,7 @@ export default {
               if (data.logindata != 0) {
                 _this.isunlogin = false
 
-                _this.$cookies.set("user", JSON.stringify(_this.ruleForm))
+                _this.$cookies.set("user", JSON.stringify(_this.ruleForm), { expires: 100 })
                 _this.$notify({
                   title: data.data,
                   type: 'success',
@@ -278,7 +279,7 @@ export default {
             if (data.logindata == 0) {
               _this.isunlogin = false
 
-              _this.$cookies.set("user", JSON.stringify(_this.ruleForm))
+              _this.$cookies.set("user", JSON.stringify(_this.ruleForm), { expires: 100 })
               _this.$notify({
                 title: data.data,
                 type: 'success',

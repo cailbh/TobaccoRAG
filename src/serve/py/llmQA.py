@@ -31,3 +31,8 @@ def chatmodel(query):
     datas = json.dumps(datas)
     head = {"Content-Type": "application/json"}
     return requests.post(url, data=datas, headers=head).json()["answers"]
+
+
+# 启动 Waitress 服务器
+if __name__ == "__main__":
+    print(zhipuChat("您好"))

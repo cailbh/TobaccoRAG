@@ -1,5 +1,6 @@
 from excelProcess import get_sheet_names, read_sheet_by_attrs
 import llmQA as llm
+from XFllm import generate_answer
 import sentence2Vec as s2v
 import json
 import multthreads as mthreads
@@ -89,7 +90,8 @@ def pairQA(user_input):
         example = "例如：3是和用户问题最一致的，输出<Answer>3</Answer>"
 
         try:
-            answer = llm.chatmodel(question + answer_format + example)
+            # answer = llm.chatmodel(question + answer_format + example)
+            answer = generate_answer(question + answer_format + example)
         except:
             # answer = llm.zhipuChat(question + answer_format + example)
             answer = "<Answer>-1</Answer>"
@@ -105,5 +107,5 @@ def pairQA(user_input):
 
 
 if __name__ == "__main__":
-    print(pairQA("罚没卷烟的收购价格是如何计算的？"))
-    # addpairQA(excel_path)
+    # print(pairQA("罚没卷烟的收购价格是如何计算的？"))
+    addpairQA(excel_path)

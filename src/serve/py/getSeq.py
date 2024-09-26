@@ -3,6 +3,7 @@ import re
 
 # 问答
 import llmQA as llmqa
+from XFllm import generate_answer
 import chunk2tree as c2t
 import multthreads as mthreads
 
@@ -144,8 +145,8 @@ def TagGet(text):
     )
 
     try:
-        ans = llmqa.chatmodel(input)
-        # ans = llmqa.zhipuChat(input)
+        # ans = llmqa.chatmodel(input)
+        ans = llmqa.zhipuChat(input)
     # except:
     # print("llm err")
     # ans = llmqa.zhipuChat(input)

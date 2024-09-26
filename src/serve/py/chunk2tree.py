@@ -3,6 +3,8 @@
 import json
 import llmQA as llmqa
 
+from XFllm import generate_answer
+
 
 def extract_json_content(text):
     start_index = text.find("{")
@@ -47,7 +49,9 @@ def getmind(text):
     # resp = llmqa.zhipuChat(prompt)
 
     try:
-        resp = llmqa.chatmodel(prompt)
+        # resp = llmqa.chatmodel(prompt)
+        resp = llmqa.zhipuChat(prompt)
+        # resp = generate_answer(prompt)
     except:
         # resp = llmqa.zhipuChat(prompt)
         resp = ""

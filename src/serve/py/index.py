@@ -43,6 +43,7 @@ with open("./config.json", "r") as f:
 
 # 模型问答
 import llmQA as llmqa
+from XFllm import generate_answer
 
 
 # 文件类型转化
@@ -643,7 +644,9 @@ def reQuery(questions):
     # response_message = llmqa.zhipuChat(user_input)
 
     try:
-        response_message = llmqa.chatmodel(user_input)
+        response_message = llmqa.zhipuChat(user_input)
+        # response_message = llmqa.chatmodel(user_input)
+        # response_message = generate_answer(user_input)
     except:
         # response_message = llmqa.zhipuChat(user_input)
         response_message = "err"
@@ -661,7 +664,9 @@ def preAnswer(questions):
     # response_message = llmqa.zhipuChat(user_input)
 
     try:
-        response_message = llmqa.chatmodel(user_input)
+        response_message = llmqa.zhipuChat(user_input)
+        # response_message = llmqa.chatmodel(user_input)
+        # response_message = generate_answer(user_input)
     except:
         # response_message = llmqa.zhipuChat(user_input)
         response_message = "err"
@@ -821,10 +826,12 @@ def QandA():
 
         # 如果不能连上本地大模型就用zhipu模型
         try:
-            response_message = llmqa.chatmodel(user_input)
+            response_message = llmqa.zhipuChat(user_input)
+            # response_message = llmqa.chatmodel(user_input)
+            # response_message = generate_answer(user_input)
         except:
             print("大模型出错")
-            #     # response_message = llmqa.zhipuChat(user_input)
+            # response_message = llmqa.zhipuChat(user_input)
             response_message = "err"
         answers = str(response_message)
 
