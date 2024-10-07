@@ -72,26 +72,29 @@ def pairQA(user_input):
     # 按照相似度从大到小排序
     results.sort(key=lambda x: x[0], reverse=True)
     end_time = time()
-    for i in range(5):
-        print(
-            f"问题{i+1}：{results[i][1]['问题']}, 来源：{results[i][1]['文件名']}, 相似度：{results[i][0]:.4f}"
-        )
+    # for i in range(5):
+    #     print(
+    #         f"问题{i+1}：{results[i][1]['问题']}, 来源：{results[i][1]['文件名']}, 相似度：{results[i][0]:.4f}"
+    #     )
 
     for i in range(5):
         # 大模型判定
         question = f"这是用户提出的问题：{user_input}\n请判断以下的候选问题中是否存在与用户的问题一致的问题，如果一致，请输出问题的序号，否则输出-1：\n\
-            问题1：{results[0][1]['问题']}， 文件: {results[0][1]['文件名']}\n\
-            问题2：{results[1][1]['问题']}， 文件: {results[1][1]['文件名']}\n\
-            问题3：{results[2][1]['问题']}， 文件: {results[2][1]['文件名']}\n\
-            问题4：{results[3][1]['问题']}， 文件: {results[3][1]['文件名']}\n\
-            问题5：{results[4][1]['问题']}， 文件: {results[4][1]['文件名']}\n\n"
+            问题1：{results[0][1]['问题']}， 文件: {results[0][1]['文件名']}， 回答: {results[0][1]['回答']}\n\
+            问题2：{results[1][1]['问题']}， 文件: {results[1][1]['文件名']}， 回答: {results[1][1]['回答']}\n\n\
+            问题3：{results[2][1]['问题']}， 文件: {results[2][1]['文件名']}， 回答: {results[2][1]['回答']}\n\n\
+            问题4：{results[3][1]['问题']}， 文件: {results[3][1]['文件名']}， 回答: {results[3][1]['回答']}\n\n\
+            问题5：{results[4][1]['问题']}， 文件: {results[4][1]['文件名']}， 回答: {results[4][1]['回答']}\n\n\n"
+
+        print(question)
 
         answer_format = f"只需要输出最一致的问题，输出格式: <Answer>1</Answer>\n"
-        example = "例如：3是和用户问题最一致的，输出<Answer>3</Answer>"
+        example = "例如：3是和用户问题最一致的，输出<Answer>3</Answer>；如果不存在有一致的输出<Answer>-1</Answer>"
 
         try:
+            answer = llm.zhipuChat(question + answer_format + example)
             # answer = llm.chatmodel(question + answer_format + example)
-            answer = generate_answer(question + answer_format + example)
+            # answer = generate_answer(question + answer_format + example)
         except:
             # answer = llm.zhipuChat(question + answer_format + example)
             answer = "<Answer>-1</Answer>"
@@ -102,6 +105,8 @@ def pairQA(user_input):
             print(f"查询时间：{end_time - start_time:.4f}秒")
             break
         except:
+            print(answer)
+            print("err")
             ans = -1
     return "None" if ans == -1 else results[ans - 1][1]["回答"]
 

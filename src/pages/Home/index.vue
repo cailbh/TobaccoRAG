@@ -34,8 +34,7 @@
     <!-- </div> -->
     <div class="rootBody">
       <div id="menu">
-        <div class="logo">
-        </div>
+        <!-- <div class="logo"> </div> -->
         <div id="headTxt">
           智能问答系统
         </div>

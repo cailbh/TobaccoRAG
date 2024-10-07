@@ -19,7 +19,7 @@ def zhipuChat(input):
     messages = []
     messages += [{"role": "user", "content": input}]
     response = client.chat.completions.create(
-        model="glm-4", messages=messages  # 填写需要调用的模型名称
+        model="glm-4-flash", messages=messages  # 填写需要调用的模型名称
     )
     return response.choices[0].message.content
 

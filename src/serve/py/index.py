@@ -651,7 +651,7 @@ def reQuery(questions):
         # response_message = llmqa.zhipuChat(user_input)
         response_message = "err"
 
-    # print("优化回答", response_message)
+    print("优化回答", response_message)
     return questions + "\n" + response_message
 
 
@@ -765,7 +765,8 @@ def QandA():
     # 是否重排
     isReOrder = request.json.get("isReOrder")
 
-    answers = qap.pairQA(questions)
+    # answers = qap.pairQA(questions)
+    answers = "None"
     quoteList = []
     if answers != "None":
         questions += answers
@@ -807,13 +808,14 @@ def QandA():
         most_similar_data = reOrder(questions, quotes)
 
     # 资料引用
-    quoteList = most_similar_data[:searchWeight]
+    quoteList = most_similar_data[: 2 * searchWeight]
     outKnowledge = ""
 
     # 问答准备
     if answers == "None":
         for q in quoteList:
             outKnowledge += q["sentence"]
+        print(outKnowledge)
         prompts = (
             "你是一名文件数据管理人员，需要对用户的问题根据资料精准得回答，如果资料中得不出结论，就不要回答，下面是相关的资料：\n"
             + outKnowledge

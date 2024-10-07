@@ -75,8 +75,8 @@ export default {
                 },
                 {
                     content: ["优化表述", "假设文档嵌入"],
-                    checked: ["假设文档嵌入"],
-                    preChecked: ["假设文档嵌入"],
+                    checked: [],
+                    preChecked: [],
                 }
             ],
             weight: 10,
