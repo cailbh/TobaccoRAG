@@ -22,6 +22,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import ast
 from bson import ObjectId, json_util
+from fileConvert import doc2docx, pdf2docx, ofd2pdf
 import reranker as rerank
 import requests
 import json
@@ -110,6 +111,8 @@ def ensure_directory_exists(directory):
 def fileremove(fileName):
     pdf_path = f"{file_path}/{fileName}.pdf"
     docx_path = f"{file_path}/{fileName}.docx"
+    doc_path = f"{file_path}/{fileName}.doc"
+    ofd_path = f"{file_path}/{fileName}.ofd"
 
     if os.path.exists(pdf_path):
         os.remove(pdf_path)
@@ -118,6 +121,14 @@ def fileremove(fileName):
     if os.path.exists(docx_path):
         os.remove(docx_path)
         print(docx_path + "已删除")
+
+    if os.path.exists(doc_path):
+        os.remove(doc_path)
+        print(doc_path + "已删除")
+
+    if os.path.exists(ofd_path):
+        os.remove(ofd_path)
+        print(ofd_path + "已删除")
 
 
 # 文件预览功能
@@ -200,9 +211,21 @@ def file_save():
 
     print(file)
     # file_path = request.form.get('file_path')
+    # file_path为全局变量
     if file:
         filepath = os.path.join(file_path, file.filename)
         file.save(filepath)
+    if file.filename.split(".")[-1] == "pdf":
+        print("pdf")
+        pdf2docx(file_path + file.filename)
+    elif file.filename.split(".")[-1] == "doc":
+        print("doc")
+        doc2docx(file_path + file.filename)
+    elif file.filename.split(".")[-1] == "ofd":
+        print("ofd")
+        ofd2pdf(file_path + file.filename)
+        pdf2docx(file_path + ".".join(file.filename.split(".")[:-1]) + ".pdf")
+
     return "successful"
 
 
@@ -328,7 +351,8 @@ def seq2vec():
     embeddings = sentence2Vec.embedding_generate([x["sentence"] for x in textData])
     for i, sentence in enumerate(textData):
         sentence["fileName"] = str(fileName)
-        sentence["sentence_embedding"] = str([x for x in embeddings[i]])
+        # sentence["sentence_embedding"] = str([x for x in embeddings[i]])
+        sentence["embedding"] = sentence2Vec.to_binary(embeddings[i])
     # 集合名称
     collection_name = "SeqVector"
     # 先把原来的删除
@@ -342,6 +366,8 @@ def seq2vec():
         collection_name, "fileName", fileName, {"chunkLen": len(textData)}
     )
 
+    with open(r"./fileupload.txt", "a") as f:
+        f.write(fileName + "上传成功\n")
     return jsonify(["success"])
 
 
@@ -458,11 +484,14 @@ def quotesMap(ansArr, quoteList):
     indexList = []
     index = 0
     nowNum = index
-    print("quoteList", list(q["sentence"] for q in quoteList))
+    # print("quoteList", list(q["sentence"] for q in quoteList))
+    for q in quoteList:
+        del q["embedding"]
 
     for i in range(0, len(ansArr)):
         # 找到与ans最匹配的quote
         quoteNum = quoteMap(ansArr[i], quoteList)
+
         print("quoteNum:", quoteNum)
         # 如果是第一次出现的quoteNum
         if quoteNum not in indexList:
@@ -485,10 +514,11 @@ def quotesMap(ansArr, quoteList):
 # 混合检索
 def RRF(order1, order2, order3, holdValue):
 
+    time_start = time.time()  # 开始计时
+
     # 获取数据
     collection_name = "SeqVector"
     allData = mg.fetch_vectors_from_db(collection_name)
-
     Len1 = len(order1)
     Len2 = len(order2)
     Len3 = len(order3)
@@ -512,11 +542,15 @@ def RRF(order1, order2, order3, holdValue):
         # vector_doc = mg.fetch_data_findone_db(collection_name,'index',int(index))
         most_similar_data.append(vector_doc)
 
+    time_end = time.time()  # 结束计时
+    time_c = time_end - time_start  # 运行所花时间
+    print("混合 cost", time_c, "s")
     return most_similar_data
 
 
 # 重排
 def reOrder(questions, quoutes):
+    time_start = time.time()  # 开始计时
     # 获取数据
     # collection_name = "SeqVector"
     # allData = mg.fetch_vectors_from_db(collection_name)
@@ -534,11 +568,16 @@ def reOrder(questions, quoutes):
         # vector_doc = mg.fetch_data_findone_db(collection_name,'index',int(index))
         most_similar_data.append(vector_doc)
 
+    time_end = time.time()  # 结束计时
+    time_c = time_end - time_start  # 运行所花时间
+    print("重排 cost", time_c, "s")
     return most_similar_data
 
 
 # 关键词检索
 def keyWord(questions, holdValue):
+    time_start = time.time()  # 开始计时
+
     # 先把questions分割成几个关键词
     questionsList = remove_special_characters(jieba.lcut_for_search(questions))
     print("分词结果", questionsList)
@@ -567,16 +606,30 @@ def keyWord(questions, holdValue):
         # vector_doc = mg.fetch_data_findone_db(collection_name,'index',int(index))
         most_similar_data.append(vector_doc)
 
+    time_end = time.time()  # 结束计时
+    time_c = time_end - time_start  # 运行所花时间
+    print("关键词 cost", time_c, "s")
     return most_similar_data
 
 
 # 余弦相似度检索
 def wordVec(questions, holdValue):
+    time_start = time.time()  # 开始计时
+
     queVec = sentence2Vec.embedding_generate(questions)
 
     collection_name = "SeqVector"
     allData = mg.fetch_vectors_from_db(collection_name)
-    vector_data = [ast.literal_eval(doc["sentence_embedding"]) for doc in allData]
+    # vector_data = [ast.literal_eval(doc["sentence_embedding"]) for doc in allData]
+    vector_data = [
+        sentence2Vec.from_binary(
+            doc["embedding"][0],
+            doc["embedding"][1],
+            doc["embedding"][2],
+        )
+        for doc in allData
+    ]
+
     # # 将向量数据转换为 numpy 数组
     vector_array = np.array(vector_data)
     target_vector = np.array(queVec)
@@ -599,16 +652,29 @@ def wordVec(questions, holdValue):
         # vector_doc = mg.fetch_data_findone_db(collection_name,'index',int(index))
         most_similar_data.append(vector_doc)
 
+    time_end = time.time()  # 结束计时
+    time_c = time_end - time_start  # 运行所花时间
+    print("余弦 cost", time_c, "s")
     return most_similar_data
 
 
 # 欧氏距离
 def euDistance(questions, holdValue):
+    time_start = time.time()  # 开始计时
+
     queVec = sentence2Vec.embedding_generate(questions)
 
     collection_name = "SeqVector"
     allData = mg.fetch_vectors_from_db(collection_name)
-    vector_data = [ast.literal_eval(doc["sentence_embedding"]) for doc in allData]
+    # vector_data = [ast.literal_eval(doc["sentence_embedding"]) for doc in allData]
+    vector_data = [
+        sentence2Vec.from_binary(
+            doc["embedding"][0],
+            doc["embedding"][1],
+            doc["embedding"][2],
+        )
+        for doc in allData
+    ]
     # # 将向量数据转换为 numpy 数组
     vector_array = np.array(vector_data)
     target_vector = np.array(queVec)
@@ -632,6 +698,9 @@ def euDistance(questions, holdValue):
         # vector_doc = mg.fetch_data_findone_db(collection_name,'index',int(index))
         most_similar_data.append(vector_doc)
 
+    time_end = time.time()  # 结束计时
+    time_c = time_end - time_start  # 运行所花时间
+    print("欧氏距离 cost", time_c, "s")
     return most_similar_data
 
 
@@ -721,6 +790,18 @@ def getFileTextSeq():
     fileName = request.json.get("fileName").split(".")[0]
     collection_name = "SeqVector"
     filiList = mg.fetch_data_find_db(collection_name, "fileName", fileName)
+
+    # filiList[0]["embedding"] = list(
+    #     sentence2Vec.from_binary(
+    #         filiList[0]["embedding"][0],
+    #         filiList[0]["embedding"][1],
+    #         filiList[0]["embedding"][2],
+    #     )
+    # )
+    # print(type(filiList[0]["embedding"]))
+
+    for f in filiList:
+        del f["embedding"]
     return jsonify(filiList)
 
 
@@ -764,6 +845,8 @@ def QandA():
     isRRF = request.json.get("isRRF")
     # 是否重排
     isReOrder = request.json.get("isReOrder")
+
+    time_start = time.time()  # 开始计时
 
     # answers = qap.pairQA(questions)
     answers = "None"
@@ -811,8 +894,150 @@ def QandA():
     quoteList = most_similar_data[: 2 * searchWeight]
     outKnowledge = ""
 
+    time_end = time.time()  # 结束计时
+    time_c = time_end - time_start  # 运行所花时间
+    print("检索 cost", time_c, "s")
+
     # 问答准备
     if answers == "None":
+        time_start = time.time()  # 开始计时
+        nowlen = 0
+        for q in quoteList:
+            if nowlen + len(q["sentence"]) < 4096:
+                outKnowledge += q["sentence"]
+                nowlen = nowlen + len(q["sentence"])
+            else:
+                break
+        print("检索资料：", outKnowledge)
+        prompts = (
+            "你是一名文件数据管理人员，需要对用户的问题根据资料精准得回答，如果资料中得不出结论，就不要回答，下面是相关的资料：\n"
+            + outKnowledge
+        )
+
+        user_input = prompts + "下面是用户的问题，请回答：" + original_query
+
+        print("问题长度：", len(user_input))
+        # response_message = llmqa.zhipuChat(user_input)
+
+        # 如果不能连上本地大模型就用zhipu模型
+        try:
+            response_message = llmqa.zhipuChat(user_input)
+            # response_message = llmqa.chatmodel(user_input)
+            # response_message = generate_answer(user_input)
+        except:
+            print("大模型出错")
+            # response_message = llmqa.zhipuChat(user_input)
+            response_message = "err"
+        answers = str(response_message)
+
+        time_end = time.time()  # 结束计时
+        time_c = time_end - time_start  # 运行所花时间
+        print("回答 cost", time_c, "s")
+
+    # 对回答进行处理
+    ansArr = ansSplit(answers)
+    print("ansArr：", ansArr)
+    time_start = time.time()  # 开始计时
+
+    (newQuoteList, textWithQuote) = quotesMap(ansArr, quoteList)
+
+    time_end = time.time()  # 结束计时
+    time_c = time_end - time_start  # 运行所花时间
+    print("处理回答 cost", time_c, "s")
+    # -----------------------------------------------------------
+    # else:
+    #     newQuoteList = []
+    #     textWithQuote = [{"text": answers, "quote": -1}]
+
+    return jsonify(
+        {
+            "answers": answers,
+            "quote": list(newQuoteList),
+            "textWithQuote": list(textWithQuote),
+        }
+    )
+
+
+@app.route("/QAstream", methods=["POST"])
+def QandAstream():
+    questions = request.json.get("questions")
+    original_query = questions
+
+    # 检索参考值 0为关键词;1为余弦相似度;2为欧氏距离
+    searchWay = request.json.get("searchWay")
+    # 检索强度
+    searchWeight = request.json.get("searchWeight")
+    outKnowledge = ""
+    most_similar_data = ""
+    # 是否优化提问
+    reAsk = request.json.get("reAsk")
+    # 是否预回答优化
+    preAns = request.json.get("preAns")
+    # 是否使用混合检索
+    isRRF = request.json.get("isRRF")
+    # 是否重排
+    isReOrder = request.json.get("isReOrder")
+
+    time_start = time.time()  # 开始计时
+
+    # answers = qap.pairQA(questions)
+
+    answers = "None"
+    newQuoteList = []
+    textWithQuote = []
+
+    quoteList = []
+    if answers != "None":
+        questions += answers
+    elif reAsk == True:
+        print("重提问")
+        questions = reQuery(questions)
+    elif preAns == True:
+        print("预回答")
+        questions = preAnswer(questions)
+
+    print(questions)
+
+    # 选择检索方法
+    if isRRF:
+        print("混合检索")
+        # 混合检索
+        most_similar_data = RRF(
+            keyWord(questions, searchWeight),
+            wordVec(questions, searchWeight),
+            euDistance(questions, searchWeight),
+            searchWeight,
+        )
+
+    elif searchWay == 0:
+        print("关键词检索")
+        most_similar_data = keyWord(questions, searchWeight)
+    elif searchWay == 1:
+        print("余弦相似度检索")
+        most_similar_data = wordVec(questions, searchWeight)
+    elif searchWay == 2:
+        print("欧氏距离检索")
+        most_similar_data = euDistance(questions, searchWeight)
+
+    # 重排
+    if isReOrder:
+        print("重排")
+        quotes = most_similar_data[: 10 * searchWeight]
+        print("重排数组长度:", len(quotes))
+        most_similar_data = reOrder(questions, quotes)
+
+    # 资料引用
+    quoteList = most_similar_data[: 2 * searchWeight]
+    outKnowledge = ""
+
+    time_end = time.time()  # 结束计时
+    time_c = time_end - time_start  # 运行所花时间
+    print("检索 cost", time_c, "s")
+
+    # 问答准备
+    if answers == "None":
+        time_start = time.time()  # 开始计时
+
         for q in quoteList:
             outKnowledge += q["sentence"]
         print(outKnowledge)
@@ -837,6 +1062,10 @@ def QandA():
             response_message = "err"
         answers = str(response_message)
 
+        time_end = time.time()  # 结束计时
+        time_c = time_end - time_start  # 运行所花时间
+        print("回答 cost", time_c, "s")
+
     # 对回答进行处理
     ansArr = ansSplit(answers)
     print("ansArr：", ansArr)
@@ -846,19 +1075,34 @@ def QandA():
 
     time_end = time.time()  # 结束计时
     time_c = time_end - time_start  # 运行所花时间
-    print("index cost", time_c, "s")
+    print("处理回答 cost", time_c, "s")
     # -----------------------------------------------------------
     # else:
     #     newQuoteList = []
     #     textWithQuote = [{"text": answers, "quote": -1}]
 
-    return jsonify(
-        {
-            "answers": answers,
-            "quote": list(newQuoteList),
-            "textWithQuote": list(textWithQuote),
-        }
-    )
+    # return jsonify(
+    #     {
+    #         "answers": answers,
+    #         "quote": list(newQuoteList),
+    #         "textWithQuote": list(textWithQuote),
+    #     }
+    # )
+    # 流式返回函数
+
+    def generate():
+        yield "data: {}\n\n".format(
+            json.dumps(
+                {
+                    "answers": answers,
+                    "quote": list(newQuoteList),
+                    "textWithQuote": list(textWithQuote),
+                }
+            )
+        )
+        yield "event: end\ndata: {}\n\n".format(json.dumps({"status": "completed"}))
+
+    return Response(generate(), mimetype="text/event-stream")
 
 
 # if __name__ == "__main__":

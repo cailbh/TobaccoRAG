@@ -60,7 +60,7 @@
               <i class="el-icon-upload"></i>
               <span slot="title" class="navTxt">文件上传</span>
 
-              <input type="file" ref="fileUpload" @change="handleFileChange" style="display: none;" />
+              <input type="file" ref="fileUpload" multiple @change="handleFilesChange" style="display: none;" />
             </template>
           </el-menu-item>
           <el-menu-item index="2">
@@ -193,6 +193,47 @@ export default {
       this.$bus.$emit("curFileName", fileName);
 
       loading.close();
+    },
+    // 多文件上传
+    handleFilesChange(event) {
+      let _this = this
+
+      const files = event.target.files;
+
+      // 遍历文件列表
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        let fileName = file.name;
+
+        // 显示加载动画
+        const loading = this.$loading({
+          lock: true,
+          text: '正在上传文件 ' + fileName,
+          spinner: 'el-icon-loading',
+          background: 'rgba(0, 0, 0, 0.7)'
+        });
+
+        // 为每个文件创建FormData
+        let formData = new FormData();
+        formData.append('file', file);
+
+        // 发送文件到服务器
+        this.$http
+          .post("/api/filesave", formData, {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+          .then((response) => {
+            console.log("文件 " + fileName + " 保存成功");
+            _this.$bus.$emit("curFileName", fileName);
+            loading.close();
+          })
+          .catch((error) => {
+            console.error("文件 " + fileName + " 保存失败: ", error);
+            loading.close();
+          });
+      }
     },
     handleOpen(key, keyPath) {
       const _this = this;

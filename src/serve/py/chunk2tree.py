@@ -77,7 +77,7 @@ def getmind(text):
         resp = extract_json_content(resp)
         json_resp = eval(resp)
     except:
-        print(resp)
+        # print(resp)
         json_resp = []
     return json_resp
 

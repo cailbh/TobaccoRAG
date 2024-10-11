@@ -199,8 +199,8 @@ export default {
       fileName: '',
       rate: 1,
       textData: [],
-      chunkSize: 300,
-      overlap: 50,
+      chunkSize: 1000,
+      overlap: 200,
       selectedText: '',
       contextMenu: {
         visible: false,
@@ -216,7 +216,9 @@ export default {
   watch: {
     curFileName(val) {
       console.log("curFileNamesss", val);
-    }
+    },
+    deep: true,
+    immediate: true
   },
   methods: {
     dgShowClk() {
@@ -460,17 +462,17 @@ export default {
       this.mode = 1;
     },
     textChunkClk() {
+      const _this = this;
+      let chunkSize = this.chunkSize;
+      let overlap = this.overlap;
+      let fileName = this.curFileName;
+      let SplitType = this.SplitType;
       const loading = this.$loading({
         lock: true,
         text: '正在分割中',
         spinner: 'el-icon-loading',
         background: 'rgba(0, 0, 0, 0.7)'
       });
-      const _this = this;
-      let chunkSize = this.chunkSize;
-      let overlap = this.overlap;
-      let fileName = this.curFileName;
-      let SplitType = this.SplitType;
       this.$http
         .post("/api/wordToSeq", { file: fileName, overlap: overlap, chunkSize: chunkSize, SplitType: SplitType }, {
           headers: {
@@ -492,6 +494,53 @@ export default {
             type: 'success',
             message: '文本分割完成,请确认后添加至知识库'
           });
+          console.log(fileName, "ok")
+          // _this.confirmClk();
+          _this.confirmWithPara(seqData, fileName)
+
+        });
+    },
+    textChunkClkwithPara(fileName) {
+      const _this = this;
+      let chunkSize = this.chunkSize;
+      let overlap = this.overlap;
+      let SplitType = this.SplitType;
+      const loading = this.$loading({
+        lock: true,
+        text: '正在分割中',
+        spinner: 'el-icon-loading',
+        background: 'rgba(0, 0, 0, 0.7)'
+      });
+      this.$http
+        .post("/api/wordToSeq", { file: fileName, overlap: overlap, chunkSize: chunkSize, SplitType: SplitType }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then((res) => {
+          console.log(res)
+          let seqData = res.body.sentences
+          _this.updataChunk(seqData);
+
+          loading.close();
+          // _this.$message({
+          //   message: '文本分割完成',
+          //   type: 'success'
+          // });
+          _this.$notify({
+            title: '文本分割完成',
+            type: 'success',
+            message: '文本分割完成,请确认后添加至知识库'
+          });
+          console.log("文件 " + fileName + " 分割");
+
+          // _this.confirmClk();
+          _this.confirmWithPara(seqData, fileName)
+
+        })
+        .catch((error) => {
+          console.error("文件 " + fileName + " 分割失败: ", error);
+          loading.close();
         });
     },
     confirmClk() {
@@ -503,11 +552,43 @@ export default {
       });
       const _this = this;
       this.$http
-        .post("/api/seqToVec", { textData: _this.textData, fileName: _this.curFileName }, {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        })
+        .post("/api/seqToVec",
+          { textData: _this.textData, fileName: _this.curFileName },
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+        .then((res) => {
+          // _this.$message({
+          //   message: '成功建立向量数据库',
+          //   type: 'success'
+          // });
+          loading.close();
+          _this.$notify({
+            title: '保存成功',
+            type: 'success',
+            message: '当前数据已添加至知识库'
+          });
+        });
+    },
+    confirmWithPara(textData, curFileName) {
+      console.log("curFileName:", curFileName)
+      const loading = this.$loading({
+        lock: true,
+        text: '正在上传' + curFileName,
+        spinner: 'el-icon-loading',
+        background: 'rgba(0, 0, 0, 0.7)'
+      });
+      const _this = this;
+      this.$http
+        .post("/api/seqToVec",
+          { textData: textData, fileName: curFileName },
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
         .then((res) => {
           // _this.$message({
           //   message: '成功建立向量数据库',
@@ -573,7 +654,16 @@ export default {
         })
         .then((response) => {
           console.log("getFileTextSeq", response.body);
-          _this.updataChunk(response.body);
+          if (response.body.length == 0) {
+            _this.dgShowClk();
+
+            _this.textChunkClkwithPara(fileName)
+            // _this.textChunkClk()
+
+          }
+          else {
+            _this.updataChunk(response.body);
+          }
           // }
         });
     },
