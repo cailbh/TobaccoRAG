@@ -492,7 +492,7 @@ def quotesMap(ansArr, quoteList):
         # 找到与ans最匹配的quote
         quoteNum = quoteMap(ansArr[i], quoteList)
 
-        print("quoteNum:", quoteNum)
+        # print("quoteNum:", quoteNum)
         # 如果是第一次出现的quoteNum
         if quoteNum not in indexList:
             indexList.append(quoteNum)
@@ -908,7 +908,7 @@ def QandA():
                 nowlen = nowlen + len(q["sentence"])
             else:
                 break
-        print("检索资料：", outKnowledge)
+        # print("检索资料：", outKnowledge)
         prompts = (
             "你是一名文件数据管理人员，需要对用户的问题根据资料精准得回答，如果资料中得不出结论，就不要回答，下面是相关的资料：\n"
             + outKnowledge
@@ -936,7 +936,7 @@ def QandA():
 
     # 对回答进行处理
     ansArr = ansSplit(answers)
-    print("ansArr：", ansArr)
+    # print("ansArr：", ansArr)
     time_start = time.time()  # 开始计时
 
     (newQuoteList, textWithQuote) = quotesMap(ansArr, quoteList)
@@ -960,6 +960,7 @@ def QandA():
 
 @app.route("/QAstream", methods=["POST"])
 def QandAstream():
+    # def stream_response():
     questions = request.json.get("questions")
     original_query = questions
 
@@ -997,7 +998,6 @@ def QandAstream():
         questions = preAnswer(questions)
 
     print(questions)
-
     # 选择检索方法
     if isRRF:
         print("混合检索")
@@ -1051,62 +1051,99 @@ def QandAstream():
         print("问题长度：", len(user_input))
         # response_message = llmqa.zhipuChat(user_input)
 
+    def stream_response():
         # 如果不能连上本地大模型就用zhipu模型
+        time_start = time.time()
+        answers = ""
         try:
-            response_message = llmqa.zhipuChat(user_input)
+            # response_message = llmqa.zhipuChat(user_input)
             # response_message = llmqa.chatmodel(user_input)
             # response_message = generate_answer(user_input)
+            from openai import OpenAI
+
+            api_key = "32a9f0f0372792bc0aa4a50fdc023462.lyB6j4K3pESjEIgM"
+            api_base = "https://open.bigmodel.cn/api/paas/v4/"
+            client = OpenAI(api_key=api_key, base_url=api_base)
+            response = client.chat.completions.create(
+                model="glm-4-flash",  # 可以替换为你想使用的模型
+                messages=[{"role": "user", "content": user_input}],
+                stream=True,  # 开启流式响应
+            )
+
+            answers = ""
+            for chunk in response:
+                chunk_message = chunk.choices[0].delta.content
+                answers += chunk_message
+                print(chunk_message, end="", flush=True)
+                json_data = json.dumps({"message": chunk_message})
+                yield f"data: {json_data}\n\n"  # 按 SSE 格式发送数据
+
         except:
             print("大模型出错")
             # response_message = llmqa.zhipuChat(user_input)
-            response_message = "err"
-        answers = str(response_message)
+            json_data = json.dumps({"message": "Error"})
+            yield f"data: {json_data}\n\n"  # 按 SSE 格式发送数据
 
         time_end = time.time()  # 结束计时
         time_c = time_end - time_start  # 运行所花时间
         print("回答 cost", time_c, "s")
 
-    # 对回答进行处理
-    ansArr = ansSplit(answers)
-    print("ansArr：", ansArr)
-    time_start = time.time()  # 开始计时
+        # 对回答进行处理
+        ansArr = ansSplit(answers)
+        print("ansArr：", ansArr)
+        time_start = time.time()  # 开始计时
 
-    (newQuoteList, textWithQuote) = quotesMap(ansArr, quoteList)
+        (newQuoteList, textWithQuote) = quotesMap(ansArr, quoteList)
 
-    time_end = time.time()  # 结束计时
-    time_c = time_end - time_start  # 运行所花时间
-    print("处理回答 cost", time_c, "s")
-    # -----------------------------------------------------------
-    # else:
-    #     newQuoteList = []
-    #     textWithQuote = [{"text": answers, "quote": -1}]
+        time_end = time.time()  # 结束计时
+        time_c = time_end - time_start  # 运行所花时间
+        print("处理回答 cost", time_c, "s")
+        # -----------------------------------------------------------
+        # else:
+        #     newQuoteList = []
+        #     textWithQuote = [{"text": answers, "quote": -1}]
 
-    # return jsonify(
-    #     {
-    #         "answers": answers,
-    #         "quote": list(newQuoteList),
-    #         "textWithQuote": list(textWithQuote),
-    #     }
-    # )
-    # 流式返回函数
+        # return jsonify(
+        #     {
+        #         "answers": answers,
+        #         "quote": list(newQuoteList),
+        #         "textWithQuote": list(textWithQuote),
+        #     }
+        # )
+        # 流式返回函数
 
-    def generate():
-        yield "data: {}\n\n".format(
-            json.dumps(
-                {
-                    "answers": answers,
-                    "quote": list(newQuoteList),
-                    "textWithQuote": list(textWithQuote),
-                }
+        def generate():
+            yield "data: {}\n\n".format(
+                json.dumps(
+                    {
+                        "answers": answers,
+                        "quote": list(newQuoteList),
+                        "textWithQuote": list(textWithQuote),
+                    }
+                )
             )
+            yield "event: end\ndata: {}\n\n".format(json.dumps({"status": "completed"}))
+
+        json_data = json.dumps(
+            {
+                "message": "Done",
+                "quote": list(newQuoteList),
+                "textWithQuote": list(textWithQuote),
+            }
         )
-        yield "event: end\ndata: {}\n\n".format(json.dumps({"status": "completed"}))
+        yield f"data: {json_data}\n\n"
 
-    return Response(generate(), mimetype="text/event-stream")
+    headers = {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+    }
+    return Response(
+        stream_response(), content_type="text/event-stream", headers=headers
+    )
 
 
-# if __name__ == "__main__":
-# app.run(debug=True, port=3000)
+
 
 # 启动 Waitress 服务器
 if __name__ == "__main__":

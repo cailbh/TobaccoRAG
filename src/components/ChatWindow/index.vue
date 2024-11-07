@@ -32,13 +32,15 @@
                             <el-button style="float: right; padding: 3px 0" type="text"></el-button>
                         </div> -->
                         <!-- <div class="chatText" v-html="message.text"> -->
-                        <div class="chatText">
+                        <div class="chatText" v-if="message.isStream">
+                            <div v-html="rawToMarked(message.rawText)"></div>
+                        </div>
+                        <div class="chatText" v-else>
                             <div v-for="(sentence, index) in message.textWithQuote " @mouseover="quoteOver($event)"
                                 @mouseout="quoteOut($event)" @click="quoteClk((message.quote[sentence.quote]))"
                                 v-html="rawToMarked(sentence.text + ((sentence.quote == -1) ? '' : quoteHTML(index + 1, sentence.quote + 1)))"
                                 class="chatTextLine">
                             </div>
-                            <!-- <div v-html="rawToMarked(sentence.text)"></div> -->
                         </div>
                         <!-- <el-button v-for="( item, index ) in  message.quote " :key="index" type="text"
                             @click="quoteClk(item)">
@@ -75,7 +77,7 @@
             </searchControl>
 
             <el-input type="textarea" :autosize="{ minRows: 4, maxRows: 4 }" placeholder="请输入内容" v-model="inputText"
-                @keyup.enter.native="submit">
+                @keyup.enter.native="streamQA">
             </el-input>
             <el-button class="subBut" size="mini" @click="submit" icon="el-icon-upload2" type="primary" circle>
             </el-button>
@@ -117,12 +119,13 @@ export default {
             preAns: true,
             isRRF: true,
             isReOrder: true,
-            searchWeight: 10
+            searchWeight: 10,
+            ws: ""
         };
     },
     watch: {
         messages(val) {
-            console.log("new message hist", val)
+            // console.log("new message hist", val)
             this.saveHistory()
         },
     },
@@ -134,6 +137,7 @@ export default {
         this.$nextTick(() => {
             setTimeout(() => {
                 _this.scrollToBottom();
+                _this.useWebSocket()
             }, 1000);
         });
     },
@@ -268,6 +272,191 @@ export default {
                         }, 1000);
                     });
             }
+        },
+        streamQA() {
+            const _this = this;
+            if (this.inputText.trim()) {
+                let questions = _this.inputText;
+                // 将我的消息加入hist
+                this.messages.push({
+                    id: Date.now(),
+                    text: this.inputText,
+                    isMe: true
+                });
+
+                const loading = this.$loading({
+                    lock: true,
+                    text: '大模型正在回答您的问题',
+                    spinner: 'el-icon-loading',
+                    background: 'rgba(0, 0, 0, 0.7)'
+                });
+
+                this.inputText = '';
+                setTimeout(() => {
+                    _this.scrollToBottom();
+                }, 1000);
+                let input_data = {
+                    questions: questions,
+                    reAsk: this.reAsk,
+                    preAns: this.preAns,
+                    isRRF: this.isRRF,
+                    isReOrder: this.isReOrder,
+                    searchWay: this.searchWay,
+                    searchWeight: this.searchWeight
+                }
+                this.messages.push({
+                    id: Date.now(),
+                    text: "",
+                    isMe: false,
+                    quote: [],
+                    rawText: "",
+                    textWithQuote: [],
+                    isbad: false,
+                    isStream: true
+                });
+
+                _this.wsSend(JSON.stringify(input_data))
+                // console.log(res)
+                // let data = res.body;
+                // let ans = data['answers'];
+                // let quote = data['quote'];
+                // let textWithQuote = data['textWithQuote'];
+                // let isbad = false
+                // console.log("quote", quote);
+                // let markedText = marked(ans)
+                // console.log(markedText)
+
+                loading.close();
+
+                setTimeout(() => {
+                    _this.scrollToBottom();
+                }, 1000);
+            }
+
+        },
+        processText(response, reader, decoder) {
+            let buffer = '';
+            console.log(this.messages.at(-1))
+            reader.read().then(({ done, value }) => {
+                if (done) {
+                    console.log('Stream ended');
+                    try {
+                        // 尝试解析可能残留在buffer中的数据
+                        const messagess = buffer.split('\n').filter(Boolean);
+                        messagess.forEach(message => {
+                            try {
+                                let data = JSON.parse(message);
+                                console.log(data);
+                                // 在这里处理数据，例如添加到messages
+                                // console.log(this.messages.at(-1))
+                                // 在这里处理数据，例如添加到messages
+                                if (data.message != "Done")
+                                    this.messages.at(-1).rawText += data.message
+                                else {
+                                    console.log("finished", data)
+                                    let ans = data['answers'];
+                                    let quote = data['quote'];
+                                    let textWithQuote = data['textWithQuote'];
+                                    let isbad = false
+                                    console.log("quote", quote);
+                                    let markedText = marked(ans)
+                                    // console.log(markedText)
+                                    this.messages.pop()
+                                    this.messages.push({
+                                        id: Date.now(),
+                                        text: markedText,
+                                        isMe: false,
+                                        quote: quote,
+                                        rawText: ans,
+                                        textWithQuote: textWithQuote,
+                                        isbad: isbad
+                                    });
+                                }
+                            } catch (e) {
+                                console.error(e);
+                            }
+                        });
+                    }
+                    finally {
+                        // loading.close();
+                    }
+                    return;
+                }
+                const chunk = decoder.decode(value, { stream: true });
+                buffer += chunk;
+                console.log("now chunk", chunk);
+                // 分割buffer为单独的消息
+                const messagess = buffer.split('\n').filter(Boolean);
+                messagess.forEach(message => {
+                    try {
+                        let data = JSON.parse(message);
+                        // console.log(data);
+                        // console.log(this.messages.at(-1))
+                        // 在这里处理数据，例如添加到messages
+                        this.messages.at(-1).rawText += data.message
+
+                    } catch (e) {
+                        if (e instanceof SyntaxError) {
+                            // JSON解析错误，可能是数据还不完整，继续读取下一块数据
+                            buffer = message; // 保存不完整的消息到buffer
+                            console.log('Received chunk, waiting for more data...');
+                        } else {
+                            console.error(e);
+                        }
+                    }
+                });
+                this.processText(response, reader, decoder);
+
+            }).catch(error => {
+                console.error('Fetch error:', error);
+                // loading.close();
+            });
+        },
+        useWebSocket: function () {
+            let _this = this
+            _this.ws = new WebSocket('ws://localhost:7777/QA')
+
+            const init = () => {
+                bindEvent();
+            }
+
+            function bindEvent() {
+                _this.ws.addEventListener('open', handleOpen, false);
+                _this.ws.addEventListener('error', handleError, false);
+                _this.ws.addEventListener('message', handleMessage, false);
+                _this.ws.addEventListener('close', handleClose, false);
+            }
+
+            function handleOpen(e) {
+                console.log("WebSocket open", e);
+            }
+
+            function handleClose(e) {
+                console.log("WebSocket close", e);
+            }
+
+            function handleError(e) {
+                console.log("WebSocket error", e);
+            }
+
+            function handleMessage(e) {
+                console.log("WebSocket message", e);
+                if (e.data != "DONE") {
+                    // _this.stream += e.data; // 将接收到的数据赋值给 stream 变量
+                    _this.messages.at(-1).rawText += e.data
+                    console.log(e.data)
+                }
+                else {
+                    console.log("ok")
+                    // _this.stream += '<br>';
+                }
+            }
+
+            init();
+        },
+        wsSend(input) {
+            let _this = this
+            _this.ws.send(input)
         },
         searchChange(val, weight) {
             // console.log(val)
