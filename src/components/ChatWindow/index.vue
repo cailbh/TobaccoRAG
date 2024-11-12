@@ -316,15 +316,6 @@ export default {
                 });
 
                 _this.wsSend(JSON.stringify(input_data))
-                // console.log(res)
-                // let data = res.body;
-                // let ans = data['answers'];
-                // let quote = data['quote'];
-                // let textWithQuote = data['textWithQuote'];
-                // let isbad = false
-                // console.log("quote", quote);
-                // let markedText = marked(ans)
-                // console.log(markedText)
 
                 loading.close();
 
@@ -333,84 +324,6 @@ export default {
                 }, 1000);
             }
 
-        },
-        processText(response, reader, decoder) {
-            let buffer = '';
-            console.log(this.messages.at(-1))
-            reader.read().then(({ done, value }) => {
-                if (done) {
-                    console.log('Stream ended');
-                    try {
-                        // 尝试解析可能残留在buffer中的数据
-                        const messagess = buffer.split('\n').filter(Boolean);
-                        messagess.forEach(message => {
-                            try {
-                                let data = JSON.parse(message);
-                                console.log(data);
-                                // 在这里处理数据，例如添加到messages
-                                // console.log(this.messages.at(-1))
-                                // 在这里处理数据，例如添加到messages
-                                if (data.message != "Done")
-                                    this.messages.at(-1).rawText += data.message
-                                else {
-                                    console.log("finished", data)
-                                    let ans = data['answers'];
-                                    let quote = data['quote'];
-                                    let textWithQuote = data['textWithQuote'];
-                                    let isbad = false
-                                    console.log("quote", quote);
-                                    let markedText = marked(ans)
-                                    // console.log(markedText)
-                                    this.messages.pop()
-                                    this.messages.push({
-                                        id: Date.now(),
-                                        text: markedText,
-                                        isMe: false,
-                                        quote: quote,
-                                        rawText: ans,
-                                        textWithQuote: textWithQuote,
-                                        isbad: isbad
-                                    });
-                                }
-                            } catch (e) {
-                                console.error(e);
-                            }
-                        });
-                    }
-                    finally {
-                        // loading.close();
-                    }
-                    return;
-                }
-                const chunk = decoder.decode(value, { stream: true });
-                buffer += chunk;
-                console.log("now chunk", chunk);
-                // 分割buffer为单独的消息
-                const messagess = buffer.split('\n').filter(Boolean);
-                messagess.forEach(message => {
-                    try {
-                        let data = JSON.parse(message);
-                        // console.log(data);
-                        // console.log(this.messages.at(-1))
-                        // 在这里处理数据，例如添加到messages
-                        this.messages.at(-1).rawText += data.message
-
-                    } catch (e) {
-                        if (e instanceof SyntaxError) {
-                            // JSON解析错误，可能是数据还不完整，继续读取下一块数据
-                            buffer = message; // 保存不完整的消息到buffer
-                            console.log('Received chunk, waiting for more data...');
-                        } else {
-                            console.error(e);
-                        }
-                    }
-                });
-                this.processText(response, reader, decoder);
-
-            }).catch(error => {
-                console.error('Fetch error:', error);
-                // loading.close();
-            });
         },
         useWebSocket: function () {
             let _this = this
@@ -441,13 +354,39 @@ export default {
 
             function handleMessage(e) {
                 console.log("WebSocket message", e);
-                if (e.data != "DONE") {
+                let res = JSON.parse(e.data)
+                // console.log(res)
+                if (res.isOK != true) {
                     // _this.stream += e.data; // 将接收到的数据赋值给 stream 变量
-                    _this.messages.at(-1).rawText += e.data
-                    console.log(e.data)
+                    _this.messages.at(-1).rawText += res.message
+                    // console.log(e.data)
                 }
                 else {
-                    console.log("ok")
+                    // console.log("ok")
+                    _this.messages.pop()
+
+                    let ans = res['answers'];
+                    let quote = res['quote'];
+                    let textWithQuote = res['textWithQuote'];
+                    let isbad = false
+                    // console.log("quote", quote);
+                    let markedText = marked(ans)
+                    // console.log(markedText)
+                    _this.messages.push({
+                        id: Date.now(),
+                        text: markedText,
+                        isMe: false,
+                        quote: quote,
+                        rawText: ans,
+                        textWithQuote: textWithQuote,
+                        isbad: isbad,
+                        isStream: false
+                    });
+
+                    setTimeout(() => {
+                        _this.scrollToBottom();
+                    }, 1000);
+                    // console.log(markedText)
                     // _this.stream += '<br>';
                 }
             }

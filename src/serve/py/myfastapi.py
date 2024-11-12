@@ -27,10 +27,10 @@ async def websocket_endpoint(websocket: WebSocket):
             # print(1)
             chunk_message = chunk.choices[0].delta.content
             answers += chunk_message
-            await websocket.send_text(f"{chunk_message}")
+            json_data = json.dumps({"isOK": False, "message": chunk_message})
+            await websocket.send_text(f"{json_data}")
             await asyncio.sleep(0.1)  # 模拟延迟
             print(chunk_message, end="", flush=True)
-            # json_data = json.dumps({"message": chunk_message})
         await websocket.send_text("DONE")
 
 
@@ -174,7 +174,9 @@ async def QandA(websocket: WebSocket):
                 # print(1)
                 chunk_message = chunk.choices[0].delta.content
                 answers += chunk_message
-                await websocket.send_text(f"{chunk_message}")
+                # await websocket.send_text(f"{chunk_message}")
+                json_data = json.dumps({"isOK": False, "message": chunk_message})
+                await websocket.send_text(f"{json_data}")
                 await asyncio.sleep(0.1)  # 模拟延迟
                 print(chunk_message, end="", flush=True)
                 # json_data = json.dumps({"message": chunk_message})
@@ -193,7 +195,15 @@ async def QandA(websocket: WebSocket):
         time_end = time.time()  # 结束计时
         time_c = time_end - time_start  # 运行所花时间
         print("处理回答 cost", time_c, "s")
-        await websocket.send_text("DONE")
+        json_data = json.dumps(
+            {
+                "isOK": True,
+                "answers": answers,
+                "quote": list(newQuoteList),
+                "textWithQuote": list(textWithQuote),
+            }
+        )
+        await websocket.send_text(json_data)
         # -----------------------------------------------------------
         # else:
         #     newQuoteList = []
