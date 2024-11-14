@@ -79,7 +79,7 @@
             <el-input type="textarea" :autosize="{ minRows: 4, maxRows: 4 }" placeholder="请输入内容" v-model="inputText"
                 @keyup.enter.native="streamQA">
             </el-input>
-            <el-button class="subBut" size="mini" @click="submit" icon="el-icon-upload2" type="primary" circle>
+            <el-button class="subBut" size="mini" @click="streamQA" icon="el-icon-upload2" type="primary" circle>
             </el-button>
         </div>
     </div>
@@ -120,7 +120,8 @@ export default {
             isRRF: true,
             isReOrder: true,
             searchWeight: 10,
-            ws: ""
+            ws: "",
+            loading: null
         };
     },
     watch: {
@@ -219,7 +220,7 @@ export default {
                     isMe: true
                 });
 
-                const loading = this.$loading({
+                _this.loading = this.$loading({
                     lock: true,
                     text: '大模型正在回答您的问题',
                     spinner: 'el-icon-loading',
@@ -265,7 +266,8 @@ export default {
                             isbad: isbad
                         });
 
-                        loading.close();
+                        _this.loading.close();
+                        _this.loading = null
 
                         setTimeout(() => {
                             _this.scrollToBottom();
@@ -284,7 +286,7 @@ export default {
                     isMe: true
                 });
 
-                const loading = this.$loading({
+                _this.loading = this.$loading({
                     lock: true,
                     text: '大模型正在回答您的问题',
                     spinner: 'el-icon-loading',
@@ -317,8 +319,6 @@ export default {
 
                 _this.wsSend(JSON.stringify(input_data))
 
-                loading.close();
-
                 setTimeout(() => {
                     _this.scrollToBottom();
                 }, 1000);
@@ -346,10 +346,18 @@ export default {
 
             function handleClose(e) {
                 console.log("WebSocket close", e);
+                if (_this.loading) {
+                    _this.loading.close();
+                    _this.loading = null
+                }
             }
 
             function handleError(e) {
                 console.log("WebSocket error", e);
+                if (_this.loading) {
+                    _this.loading.close();
+                    _this.loading = null
+                }
             }
 
             function handleMessage(e) {
@@ -360,6 +368,9 @@ export default {
                     // _this.stream += e.data; // 将接收到的数据赋值给 stream 变量
                     _this.messages.at(-1).rawText += res.message
                     // console.log(e.data)
+                    setTimeout(() => {
+                        _this.scrollToBottom();
+                    }, 1000);
                 }
                 else {
                     // console.log("ok")
@@ -382,7 +393,10 @@ export default {
                         isbad: isbad,
                         isStream: false
                     });
-
+                    if (_this.loading) {
+                        _this.loading.close();
+                        _this.loading = null
+                    }
                     setTimeout(() => {
                         _this.scrollToBottom();
                     }, 1000);

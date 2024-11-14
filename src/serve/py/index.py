@@ -466,11 +466,47 @@ def ansSplit(ans):
 
 
 def quoteMap(ans, quoteList):
+    # q = []
+    # for i in quoteList:
+    #     q.append([ans, i["sentence"]])
+    # sorted_reScore = np.array(rerank.rerankerStore(q)).argsort()[::-1]
+    # print(len(quoteList))
+
+    target_vector = np.array(sentence2Vec.embedding_generate(ans))
     q = []
     for i in quoteList:
-        q.append([ans, i["sentence"]])
-    sorted_reScore = np.array(rerank.rerankerStore(q)).argsort()[::-1]
+        q.append(
+            sentence2Vec.from_binary(
+                i["embedding"][0],
+                i["embedding"][1],
+                i["embedding"][2],
+            )
+        )
 
+    cosine_res = cosine_similarity(q, target_vector.reshape(1, -1))
+    cos_res = [c[0] for c in cosine_res]
+    # print(cos_res)
+    sorted_reScore = np.array(cos_res).argsort()[::-1]
+
+    # sorted_reScore = np.array(
+    #     [
+    #         cosine_similarity(
+    #             np.array(
+    #                 [
+    #                     sentence2Vec.from_binary(
+    #                         doc["embedding"][0],
+    #                         doc["embedding"][1],
+    #                         doc["embedding"][2],
+    #                     )
+    #                 ]
+    #             ),
+    #             target_vector.reshape(1, -1),
+    #         )
+    #         for doc in quoteList
+    #     ]
+    # ).argsort()[::-1]
+
+    # vector_data = [ast.literal_eval(doc["sentence_embedding"]) for doc in allData]
     return sorted_reScore[0]
 
 
@@ -484,9 +520,6 @@ def quotesMap(ansArr, quoteList):
     indexList = []
     index = 0
     nowNum = index
-    # print("quoteList", list(q["sentence"] for q in quoteList))
-    for q in quoteList:
-        del q["embedding"]
 
     for i in range(0, len(ansArr)):
         # 找到与ans最匹配的quote
@@ -503,6 +536,9 @@ def quotesMap(ansArr, quoteList):
             nowNum = indexList.index(quoteNum)
 
         textWithQuote.append({"text": str(ansArr[i]), "quote": nowNum})
+
+    for q in newQuoteList:
+        del q["embedding"]
     return (newQuoteList, textWithQuote)
 
 
@@ -1141,8 +1177,6 @@ def QandAstream():
     return Response(
         stream_response(), content_type="text/event-stream", headers=headers
     )
-
-
 
 
 # 启动 Waitress 服务器
