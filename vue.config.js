@@ -25,9 +25,18 @@ module.exports = defineConfig({
             proxyReq.setHeader('Content-Length', contentLength);
           }
         }
+      },
+      '/wss': {
+        // target: 'ws://127.0.0.1:7777/',
+        target: 'http://127.0.0.1:7777/',
+        changeOrigin: true,
+        pathRewrite: {
+          '^/wss': ''
+        },
+        ws: true
       }
     },
-    webSocketServer: false
+    // webSocketServer: false
   },
   configureWebpack: (config) => {
     config.module.rules.push({

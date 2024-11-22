@@ -327,7 +327,7 @@ export default {
         },
         useWebSocket: function () {
             let _this = this
-            _this.ws = new WebSocket('ws://localhost:7777/QA')
+            _this.ws = new WebSocket('/wss/QA')
 
             const init = () => {
                 bindEvent();

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, Request
 import uvicorn
 import asyncio
 from openai import OpenAI
@@ -47,7 +47,7 @@ from index import (
     ansSplit,
     quotesMap,
 )
-import llmQA as llmqa
+from XFllm import run_spark_chat_answer
 
 
 @app.websocket("/QA")
@@ -169,10 +169,13 @@ async def QandA(websocket: WebSocket):
                 stream=True,  # 开启流式响应
             )
 
+            # response = run_spark_chat_answer(user_input)
+
             answers = ""
             for chunk in response:
                 # print(1)
                 chunk_message = chunk.choices[0].delta.content
+                # chunk_message = chunk
                 answers += chunk_message
                 # await websocket.send_text(f"{chunk_message}")
                 json_data = json.dumps({"isOK": False, "message": chunk_message})
